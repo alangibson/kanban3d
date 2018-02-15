@@ -19,7 +19,12 @@ Vue.use(Vuex)
 
 let store = new Vuex.Store({
   state: {
-    drawer: false
+    drawer: false,
+    show: {
+      in_sight: true,
+      out_of_mind: true,
+      row_state: 11
+    }
   },
   mutations: {
   },

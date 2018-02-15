@@ -14,6 +14,7 @@
     "firebase-tools": "^3.17.4",
     "lodash": "^4.17.4",
     "register-service-worker": "^1.0.0",
+    "uuid": "^3.2.1",
     "vue": "^2.5.13",
     "vue-router": "^3.0.1",
     "vuedraggable": "^2.16.0",

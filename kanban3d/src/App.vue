@@ -22,20 +22,24 @@
             <v-list-tile-title>Log Out</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
+        <v-list-tile>
+          <v-list-tile-title>Visibility</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile>
+          <v-checkbox label="In Sight"
+                      @change="calculateRowState"
+                      v-model="$store.state.show.in_sight"/>
+        </v-list-tile>
+        <v-list-tile>
+          <v-checkbox label="Out of Mind"
+                      @change="calculateRowState"
+                      v-model="$store.state.show.out_of_mind"/>
+        </v-list-tile>
       </v-list>
     </v-navigation-drawer>
 
     <v-content>
       <v-container fluid fill-height grid-list-md>
-
-        <!--<v-btn-->
-          <!--@click.stop="drawer = !drawer"-->
-          <!--fixed-->
-          <!--fab-->
-          <!--bottom-->
-          <!--left>-->
-          <!--<v-icon>menu</v-icon>-->
-        <!--</v-btn>-->
 
         <router-view/>
 
@@ -113,7 +117,20 @@ export default {
     logOut() {
       firebase.auth().signOut()
       // TODO clear all user data
+    },
+
+    calculateRowState() {
+      // Indicate row state with a poor-mans bitmask
+      let rowState = 0
+      if (this.$store.state.show.in_sight) {
+        rowState = rowState + 1
+      }
+      if (this.$store.state.show.out_of_mind) {
+        rowState = rowState + 10
+      }
+      this.$store.state.show.row_state = rowState
     }
+
   },
   mounted() {
     firebase.auth().onAuthStateChanged((user) => {
@@ -131,6 +148,7 @@ export default {
 
       }
     })
+    this.calculateRowState()
   }
 }
 </script>
