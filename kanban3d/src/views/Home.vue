@@ -69,14 +69,15 @@
                 <v-flex xs12>
                   <v-text-field
                       v-model="add_topic_popup.topic.name"
-                      label="Name"
+                      label="What"
                       autofocus
                       :rules="[requiredRule]"
                       required />
                   <v-text-field
                       v-model="add_topic_popup.topic.description"
-                      label="Description"
-                      multi-line />
+                      label="How and Why"
+                      multi-line
+                      rows="7"/>
                   <v-text-field
                       v-model="add_topic_popup.topic.who"
                       label="Who" />
@@ -162,14 +163,15 @@
                 <v-flex xs12>
                   <v-text-field
                       v-model="edit_topic_popup.topic.name"
-                      label="Name"
+                      label="What"
                       autofocus
                       :rules="[requiredRule]"
                       required />
                   <v-text-field
                       v-model="edit_topic_popup.topic.description"
-                      label="Description"
-                      multi-line />
+                      label="How and Why"
+                      multi-line
+                      rows="7"/>
                   <v-text-field
                       v-model="edit_topic_popup.topic.who"
                       label="Who" />

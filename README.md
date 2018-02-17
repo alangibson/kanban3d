@@ -9,6 +9,7 @@ npm install --save vuetify
 npm install --save vuedraggable
 npm install --save lodash
 npm install --save uuid
+npm install --save luxon
 
 cd kanban3d
 npm run serve
