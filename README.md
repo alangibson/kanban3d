@@ -10,6 +10,7 @@ npm install --save vuedraggable
 npm install --save lodash
 npm install --save uuid
 npm install --save luxon
+npm install --save cuid
 
 cd kanban3d
 npm run serve
