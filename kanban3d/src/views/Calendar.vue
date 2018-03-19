@@ -1,15 +1,20 @@
 <template>
   <v-layout class="flex-calendar">
-    <v-flex v-for="day in calendar"
+    <v-flex v-for="(day, dayIndex) in calendar"
             class="flex-day"
             @click="showAddTimePopup(day)">
-      {{ day.start.toLocaleString(DateTime.DATE_SHORT) }}
-      <template v-for="timeBlock in timeBlocks">
-        <v-flex v-if="day.start.ts < timeBlock.start.ts && timeBlock.start.ts < day.end.ts"
+
+      {{ day.start.datetime.toLocaleString(DateTime.DATE_SHORT) }}
+
+      <template v-for="(timeBlock, timeBlockIndex) in schedule">
+        <v-flex v-if="day.start.datetime.ts < timeBlock.start.datetime.ts && timeBlock.start.datetime.ts < day.end.datetime.ts"
+                @click.stop="showEditTimePopup(timeBlock)"
                 class="flex-day"
-                style="background-color: red">
-          {{timeBlock.start.toLocaleString(DateTime.TIME_24_SIMPLE)}} -
-          {{timeBlock.end.toLocaleString(DateTime.TIME_24_SIMPLE)}}
+                style="border: 1px solid grey">
+
+          {{ timeBlock.start.datetime.toLocaleString(DateTime.TIME_24_SIMPLE) }} -
+          {{ timeBlock.end.datetime.toLocaleString(DateTime.TIME_24_SIMPLE) }}
+
         </v-flex>
       </template>
     </v-flex>
@@ -54,8 +59,7 @@
                         readonly />
                     <v-date-picker
                         ref="picker_start_date"
-                        v-model="add_time_start_date"
-                        @input="updateAddTimeStartTs"/>
+                        v-model="add_time_start_date"/>
                   </v-menu>
                 </v-flex>
                 <v-flex xs6>
@@ -76,7 +80,6 @@
                         prepend-icon="event"
                         readonly />
                     <v-time-picker
-                        @input="updateAddTimeStartTs"
                         v-model="add_time_start_time"
                         format="24hr"/>
                   </v-menu>
@@ -90,79 +93,72 @@
                       v-model="add_time_duration_hours"
                       label="Duration Hours"/>
                 </v-flex>
-                <v-flex xs12>
-                  or
-                </v-flex>
-                <v-flex xs6>
-                  <v-menu
-                      ref="menu"
-                      lazy
-                      :close-on-content-click="true"
-                      v-model="menu_end_date"
-                      transition="scale-transition"
-                      offset-y
-                      full-width
-                      :nudge-right="40"
-                      min-width="290px">
-                    <v-text-field
-                        slot="activator"
-                        label="Start At"
-                        v-model="add_time_popup.end.ts_date"
-                        prepend-icon="event"
-                        readonly />
-                    <v-date-picker
-                        ref="picker"
-                        v-model="add_time_popup.end.ts_date"
-                        @input="updateAddTimeStartTs"
-                        min="1950-01-01"
-                        :max="new Date().toISOString().substr(0, 10)"/>
-                  </v-menu>
-                </v-flex>
-                <v-flex xs6>
-                  <v-menu
-                      ref="menu"
-                      lazy
-                      :close-on-content-click="true"
-                      v-model="menu_end_time"
-                      transition="scale-transition"
-                      offset-y
-                      full-width
-                      :nudge-right="40"
-                      min-width="290px">
-                    <v-text-field
-                        slot="activator"
-                        label="Start At"
-                        v-model="add_time_popup.end.ts_time"
-                        prepend-icon="event"
-                        readonly />
-                    <v-time-picker
-                        @input="updateAddTimeStartTs"
-                        v-model="add_time_popup.end.ts_time"
-                        format="24hr"/>
-                  </v-menu>
-                </v-flex>
+                <!--<v-flex xs12>-->
+                  <!--or-->
+                <!--</v-flex>-->
+                <!--<v-flex xs6>-->
+                  <!--<v-menu-->
+                      <!--ref="menu"-->
+                      <!--lazy-->
+                      <!--:close-on-content-click="true"-->
+                      <!--v-model="menu_end_date"-->
+                      <!--transition="scale-transition"-->
+                      <!--offset-y-->
+                      <!--full-width-->
+                      <!--:nudge-right="40"-->
+                      <!--min-width="290px">-->
+                    <!--<v-text-field-->
+                        <!--slot="activator"-->
+                        <!--label="Start At"-->
+                        <!--v-model="add_time_popup.end.ts_date"-->
+                        <!--prepend-icon="event"-->
+                        <!--readonly />-->
+                    <!--<v-date-picker-->
+                        <!--ref="picker"-->
+                        <!--v-model="add_time_popup.end.ts_date"-->
+                        <!--min="1950-01-01"-->
+                        <!--:max="new Date().toISOString().substr(0, 10)"/>-->
+                  <!--</v-menu>-->
+                <!--</v-flex>-->
+                <!--<v-flex xs6>-->
+                  <!--<v-menu-->
+                      <!--ref="menu"-->
+                      <!--lazy-->
+                      <!--:close-on-content-click="true"-->
+                      <!--v-model="menu_end_time"-->
+                      <!--transition="scale-transition"-->
+                      <!--offset-y-->
+                      <!--full-width-->
+                      <!--:nudge-right="40"-->
+                      <!--min-width="290px">-->
+                    <!--<v-text-field-->
+                        <!--slot="activator"-->
+                        <!--label="Start At"-->
+                        <!--v-model="add_time_popup.end.ts_time"-->
+                        <!--prepend-icon="event"-->
+                        <!--readonly />-->
+                    <!--<v-time-picker-->
+                        <!--v-model="add_time_popup.end.ts_time"-->
+                        <!--format="24hr"/>-->
+                  <!--</v-menu>-->
+                <!--</v-flex>-->
 
                 <v-flex xs12>
                   Recurs every
                 </v-flex>
                 <v-flex xs6>
                   <v-text-field
-                      @input="updateAddTimeRecurs"
-                      v-model="add_time_popup.recurs.qty" />
+                      v-model="add_time_recurs_qty" />
                 </v-flex>
                 <v-flex xs6>
                   <v-select
                       label=""
-                      @input="updateAddTimeRecurs"
-                      v-model="add_time_popup.recurs.unit"
+                      v-model="add_time_recurs_unit"
                       :items="['days', 'weeks', 'months', 'years']"
                       item-text="recurs"
                       item-value="recurs" />
                 </v-flex>
-                <v-flex xs12>
-                  add_time_start_date={{ add_time_start_date }}
-                  add_time_start_time={{ add_time_start_time }}
-                </v-flex>
+
               </v-layout>
             </v-form>
           </v-container>
@@ -188,7 +184,9 @@
 </template>
 
 <script>
+import Vue from 'vue'
 import { DateTime } from 'luxon'
+import cuid from 'cuid'
 
 function clone(o) {
   return JSON.parse(JSON.stringify(o))
@@ -243,7 +241,15 @@ function* timeBlocks(block, untilOverride) {
       return
     }
 
-    yield {start: startAt, end: endAt, until: untilDate}
+    yield {start: {
+             datetime: startAt
+           },
+           end: {
+             datetime: endAt,
+             duration: clone(block.end.duration)
+           },
+           recurs: clone(block.recurs),
+           until: untilDate}
 
     // Avoid infinite loop if no block.recurs
     if (! block.recurs) {
@@ -252,7 +258,7 @@ function* timeBlocks(block, untilOverride) {
     }
 
     // Get ready for next loop
-    console.log('Start', startAt.toISO(), 'and end at', endAt.toISO(), 'recurs in', JSON.stringify(block.recurs))
+    // console.log('Start', startAt.toISO(), 'and end at', endAt.toISO(), 'recurs in', JSON.stringify(block.recurs))
     startAt = startAt.plus(block.recurs)
     endAt = endAt.plus(block.recurs)
   }
@@ -271,57 +277,56 @@ export default {
       visible: false,
       name: null,
       start: {
-        ts: null,
-        ts_date: null,
-        ts_time: null
+        ts: null
       },
       end: {
         ts: null,
-        ts_date: null,
-        ts_time: null,
         duration: {
           hours: null
         }
       },
       recurs: {
-        qty: null,
-        unit: null
+        days: null
       }
     },
     blocks: [
-      {
-        start:  { ts: "2018-02-03T08:00:00.000+00:00" },
-        end:    { duration: { hours: 7.7 } },
-        recurs: { weeks: 1 },
-        until:  null
-      }
     ],
-    calendarBlock: {
+    schedule_blocks: {
+    },
+    calendar_block: {
       start:  { ts: DateTime.local().startOf('month').startOf('week').toISO() },
       end:    { duration: { hours: 24 } },
       recurs: { days: 1 },
-      // until:  { duration: { months: 1 } }
-      until: { ts: DateTime.local().endOf('month').toISO() }
+      until: { ts: DateTime.local().endOf('month').endOf('week').toISO() }
     }
   }),
   methods: {
+    resetAddTimePopup() {
+      this.add_time_popup.name = null
+      this.add_time_popup.start.ts = null
+      this.add_time_popup.end.ts = null
+      this.add_time_popup.end.duration.hours = null
+    },
     showAddTimePopup(day) {
-      // FIXME start.ts is string and day.start.ts is int in DateTime
-      this.add_time_popup.start.ts = day.start.toISO()
-      this.add_time_popup.recurs =  {
-        qty: null,
-        unit: null
-      }
+      this.resetAddTimePopup()
+      this.add_time_popup.start.ts = day.start.datetime.set({
+        hour: DateTime.local().hour,
+        minute: DateTime.local().minute,
+        second: 0
+      }).toISO()
       this.add_time_popup.visible = true
     },
-    updateAddTimeStartTs() {
-      // this.add_time_popup.start.ts = DateTime.fromISO(this.add_time_popup.start.ts_date + 'T' + this.add_time_popup.start.ts_time).toISO()
-    },
-    updateAddTimeRecurs() {
-      console.log('updateAddTimeRecurs', this.add_time_popup.recurs.unit, this.add_time_popup.recurs.qty)
-      this.add_time_popup.recurs[this.add_time_popup.recurs.unit] = parseInt(this.add_time_popup.recurs.qty)
+    showEditTimePopup(day) {
+      this.resetAddTimePopup()
+      this.add_time_popup.start.ts = day.start.datetime.toISO()
+      this.add_time_popup.end.ts = day.end.datetime.toISO()
+      this.add_time_popup.end.duration = clone(day.end.duration)
+      this.add_time_popup.recurs =  clone(day.recurs)
+      this.add_time_popup.visible = true
     },
     cancelAddTimePopup() {
+      this.add_time_popup.visible = false
+      // this.resetAddTimePopup()
     },
     saveAndCloseAddTimePopup() {
       let block = clone({
@@ -333,34 +338,43 @@ export default {
         recurs: this.add_time_popup.recurs,
         until:  this.add_time_popup.until
       })
-      console.log('saveAndCloseAddTimePopup', JSON.stringify(block))
-
-      // HACK
-      delete block.recurs.qty
-      delete block.recurs.unit
-      delete block.recurs.null
 
       this.blocks.push(block)
+
+      let id = cuid()
+      console.log('pushing', id, block)
+      Vue.set(this.schedule_blocks, id, block)
     }
   },
   computed: {
     calendar() {
       let days = []
-      for (let day of timeBlocks(this.calendarBlock)) {
+      for (let day of timeBlocks(this.calendar_block)) {
         days.push(day)
       }
       return days
     },
-    timeBlocks() {
+    schedule() {
       let untilOverride = {duration: { months: 1 }}
+
+      // let days = []
+      // this.blocks.forEach((block) => {
+      //   for (let day of timeBlocks(block, untilOverride)) {
+      //     days.push(day)
+      //   }
+      // })
+
       let days = []
-      this.blocks.forEach((block) => {
-        console.log('timeBlocks block', JSON.stringify(block))
+      for (let key in this.schedule_blocks) {
+        // console.log('key', key)
+        let block = this.schedule_blocks[key]
+        // console.log('block', block)
         for (let day of timeBlocks(block, untilOverride)) {
-          console.log('timeBlocks day', JSON.stringify(day))
+          // console.log('day', day)
           days.push(day)
         }
-      })
+      }
+
       return days
     },
     add_time_start_date: {
@@ -394,10 +408,37 @@ export default {
     },
     add_time_duration_hours: {
       get() {
+        console.log('add_time_duration_hours', clone(this.add_time_popup.end))
         return this.add_time_popup.end.duration.hours
       },
       set(value) {
         this.add_time_popup.end.duration.hours = parseFloat(value)
+      }
+    },
+    add_time_recurs_qty: {
+      get() {
+        let timeUnit = Object.keys(this.add_time_popup.recurs)[0]
+        console.log('add_time_recurs_qty get', timeUnit, this.add_time_popup.recurs[timeUnit])
+        return this.add_time_popup.recurs[timeUnit]
+      },
+      set(value) {
+        let timeUnit = Object.keys(this.add_time_popup.recurs)[0]
+        console.log('add_time_recurs_qty set', timeUnit, value)
+        this.add_time_popup.recurs[timeUnit] = parseFloat(value)
+      }
+    },
+    add_time_recurs_unit: {
+      get() {
+        let out = Object.keys(this.add_time_popup.recurs)[0]
+        console.log('add_time_recurs_unit get', out)
+        return out
+      },
+      set(unit) {
+        let timeUnit = this.add_time_recurs_unit
+        let timeValue = this.add_time_recurs_qty
+        delete this.add_time_popup.recurs[timeUnit]
+        console.log('add_time_recurs_unit set', unit, timeValue)
+        this.add_time_popup.recurs[unit] = timeValue
       }
     }
   }
@@ -410,6 +451,7 @@ export default {
 }
 .flex-day {
   border: 1px solid darkgray;
+  border-collapse: collapse;
   flex: 0 1 calc(98vw / 7);
 }
 </style>
