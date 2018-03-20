@@ -57,7 +57,8 @@
 
     <!-- Add Topic Popup -->
     <v-dialog v-model="add_topic_popup.visible"
-              max-width="700px">
+              max-width="50vw"
+              hide-overlay="true">
       <v-card>
         <v-card-title>
           <span class="headline">Add Topic</span>
@@ -73,11 +74,16 @@
                       autofocus
                       :rules="[requiredRule]"
                       required />
-                  <v-text-field
-                      v-model="add_topic_popup.topic.description"
-                      label="How and Why"
-                      multi-line
-                      rows="7"/>
+
+                  <!--<v-text-field-->
+                      <!--v-model="add_topic_popup.topic.description"-->
+                      <!--label="How and Why"-->
+                      <!--multi-line-->
+                      <!--rows="7"/>-->
+                  <froala v-model="add_topic_popup.topic.description"
+                          :config="froala_config">
+                  </froala>
+
                   <v-text-field
                       v-model="add_topic_popup.topic.who"
                       label="Who" />
@@ -151,7 +157,8 @@
 
     <!-- Edit Topic Popup -->
     <v-dialog v-model="edit_topic_popup.visible"
-              max-width="50vw">
+              max-width="50vw"
+              hide-overlay="true">
       <v-card>
         <v-card-title>
           <span class="headline">Edit Topic</span>
@@ -167,11 +174,22 @@
                       autofocus
                       :rules="[requiredRule]"
                       required />
-                  <v-text-field
-                      v-model="edit_topic_popup.topic.description"
-                      label="How and Why"
-                      multi-line
-                      rows="7"/>
+
+                  <!--<v-text-field-->
+                      <!--v-model="edit_topic_popup.topic.description"-->
+                      <!--label="How and Why"-->
+                      <!--multi-line-->
+                      <!--rows="7"/>-->
+
+                  <froala v-model="edit_topic_popup.topic.description"
+                          :config="froala_config">
+                  </froala>
+
+                  <!--<textarea-->
+                      <!--class="froala-editor"-->
+                      <!--v-model="edit_topic_popup.topic.description">-->
+                  <!--</textarea>-->
+
                   <v-text-field
                       v-model="edit_topic_popup.topic.who"
                       label="Who" />
@@ -201,11 +219,16 @@
 </template>
 
 <script>
+import Vue from 'vue'
 import _ from 'lodash'
 import firebase from '@firebase/app'
 import '@firebase/database'
 import draggable from 'vuedraggable'
 import uuid from 'uuid/v4'
+// Note: Froala is globally included in index.html
+import VueFroala from 'vue-froala-wysiwyg'
+
+Vue.use(VueFroala)
 
 function clone(o) {
   return JSON.parse(JSON.stringify(o))
@@ -258,6 +281,17 @@ export default {
         visible: false,
         stage: clone(STAGE)
       },
+      froala_config: {
+        toolbarInline: true,
+        charCounterCount: false,
+        height: '30vh',
+        toolbarButtons: ['bold', 'italic', 'underline', 'strikeThrough', 'color', 'emoticons', '-', 'paragraphFormat',
+          'align', 'formatOL', 'formatUL', 'indent', 'outdent', '-', 'insertImage', 'insertLink', 'insertFile',
+          'insertVideo', 'undo', 'redo'],
+        editorClass: 'froala-editor-box',
+        placeholderText: 'How and Why',
+        zIndex: 666
+      },
       stages: [
         {
           name: 'Soon',
@@ -296,7 +330,6 @@ export default {
         }
       ],
       events: [
-
       ]
     }
   },
@@ -385,12 +418,6 @@ export default {
       }
       return 'flex-row-maximized'
     }
-    // toggleRowState() {
-    //   this.row_state++
-    //   if (this.row_state > 2) {
-    //     this.row_state = 0
-    //   }
-    // }
   },
   mounted() {
     // Load all data from Firebase
@@ -406,6 +433,11 @@ export default {
         // HACK
         this.data_ready = true
       })
+
+    // Load Froala editor
+    $('.froala-editor').froalaEditor(this.froala_config)
+    // Hide Froala license message
+    $('div[style*="z-index:9999"]').hide()
   }
 }
 </script>
@@ -441,5 +473,10 @@ export default {
   right: 2em;
   max-height: 160px;
   z-index: 100;
+}
+/* Froala */
+.fr-element {
+  /* Allow typing by clicking anywhere in the editor box */
+  height: 100%;
 }
 </style>
