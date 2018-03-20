@@ -56,79 +56,9 @@
     </v-layout>
 
     <!-- Add Topic Popup -->
-    <v-dialog v-model="add_topic_popup.visible"
-              max-width="50vw"
-              hide-overlay="true">
-      <v-card>
-        <v-card-title>
-          <span class="headline">Add Topic</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container grid-list-md>
-            <v-form ref="addTopicForm">
-              <v-layout wrap>
-                <v-flex xs12>
-                  <v-text-field
-                      v-model="add_topic_popup.topic.name"
-                      label="What"
-                      autofocus
-                      :rules="[requiredRule]"
-                      required />
-
-                  <!--<v-text-field-->
-                      <!--v-model="add_topic_popup.topic.description"-->
-                      <!--label="How and Why"-->
-                      <!--multi-line-->
-                      <!--rows="7"/>-->
-                  <froala v-model="add_topic_popup.topic.description"
-                          :config="froala_config">
-                  </froala>
-
-                  <v-text-field
-                      v-model="add_topic_popup.topic.who"
-                      label="Who" />
-                  <v-text-field
-                      v-model="add_topic_popup.topic.when"
-                      label="When" />
-                  <v-text-field
-                      v-model="add_topic_popup.topic.where"
-                      label="Where" />
-                </v-flex>
-                <v-flex xs12>
-                  <v-select
-                      label="Stage"
-                      required
-                      :rules="[requiredRule]"
-                      v-model="add_topic_popup.stage_name"
-                      :items="stages"
-                      item-text="name"
-                      item-value="name" />
-                </v-flex>
-              </v-layout>
-            </v-form>
-          </v-container>
-          <small>*indicates required field</small>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1"
-                 flat
-                 @click.native="cancelTopicPopup">
-            Close
-          </v-btn>
-          <v-btn color="blue darken-1"
-                 flat
-                 @click.native="saveAndCloseTopicPopup">
-            Save and Close
-          </v-btn>
-          <v-btn color="blue darken-1"
-                 flat
-                 @click.native="saveAddTopicPopup">
-            Save
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <topic-popup v-model="add_topic_popup"
+                 :stages="stages">
+    </topic-popup>
 
     <v-dialog v-model="show_stage_popup.visible"
               max-width="50vw">
@@ -156,64 +86,9 @@
     </v-dialog>
 
     <!-- Edit Topic Popup -->
-    <v-dialog v-model="edit_topic_popup.visible"
-              max-width="50vw"
-              hide-overlay="true">
-      <v-card>
-        <v-card-title>
-          <span class="headline">Edit Topic</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container grid-list-md>
-            <v-form ref="editTopicForm">
-              <v-layout wrap>
-                <v-flex xs12>
-                  <v-text-field
-                      v-model="edit_topic_popup.topic.name"
-                      label="What"
-                      autofocus
-                      :rules="[requiredRule]"
-                      required />
-
-                  <!--<v-text-field-->
-                      <!--v-model="edit_topic_popup.topic.description"-->
-                      <!--label="How and Why"-->
-                      <!--multi-line-->
-                      <!--rows="7"/>-->
-
-                  <froala v-model="edit_topic_popup.topic.description"
-                          :config="froala_config">
-                  </froala>
-
-                  <!--<textarea-->
-                      <!--class="froala-editor"-->
-                      <!--v-model="edit_topic_popup.topic.description">-->
-                  <!--</textarea>-->
-
-                  <v-text-field
-                      v-model="edit_topic_popup.topic.who"
-                      label="Who" />
-                  <v-text-field
-                      v-model="edit_topic_popup.topic.when"
-                      label="When" />
-                  <v-text-field
-                      v-model="edit_topic_popup.topic.where"
-                      label="Where" />
-                </v-flex>
-              </v-layout>
-            </v-form>
-          </v-container>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1"
-                 flat
-                 @click.native="saveAndCloseEditTopicPopup">
-            Save and Close
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <topic-popup v-model="edit_topic_popup"
+                 :stages="stages">
+    </topic-popup>
 
   </v-layout>
 </template>
@@ -224,29 +99,12 @@ import _ from 'lodash'
 import firebase from '@firebase/app'
 import '@firebase/database'
 import draggable from 'vuedraggable'
-import uuid from 'uuid/v4'
 // Note: Froala is globally included in index.html
 import VueFroala from 'vue-froala-wysiwyg'
+import TopicPopup from '@/components/TopicPopup.vue'
+import { clone, TOPIC, STAGE } from '@/common'
 
 Vue.use(VueFroala)
-
-function clone(o) {
-  return JSON.parse(JSON.stringify(o))
-}
-
-// Default objects
-const TOPIC = {
-  id: null,           // uuid as string
-  name: null,         // string
-  description: null,  // string
-  who: null,          // string
-  when: null,         // ISO8601 datetime as string
-  where: null         // string
-}
-const STAGE = {
-  name: null,
-  topics: []
-}
 
 // Initialize Firebase
 var config = {
@@ -261,7 +119,8 @@ firebase.initializeApp(config)
 
 export default {
   components: {
-    draggable
+    draggable,
+    TopicPopup
   },
   data() {
     return {
@@ -280,17 +139,6 @@ export default {
       show_stage_popup: {
         visible: false,
         stage: clone(STAGE)
-      },
-      froala_config: {
-        toolbarInline: true,
-        charCounterCount: false,
-        height: '30vh',
-        toolbarButtons: ['bold', 'italic', 'underline', 'strikeThrough', 'color', 'emoticons', '-', 'paragraphFormat',
-          'align', 'formatOL', 'formatUL', 'indent', 'outdent', '-', 'insertImage', 'insertLink', 'insertFile',
-          'insertVideo', 'undo', 'redo'],
-        editorClass: 'froala-editor-box',
-        placeholderText: 'How and Why',
-        zIndex: 666
       },
       stages: [
         {
@@ -334,81 +182,51 @@ export default {
     }
   },
   methods: {
-    onEnd(event) {
-      // Send data.stages to Firebase
-      this.saveStagesToFirebase()
-    },
     // Save data.stages to Firebase
-    saveStagesToFirebase() {
+    saveStagesToFirebase () {
       firebase.database()
         .ref('stages')
         .set(this.stages)
     },
 
+    // Draggable onEnd method
+    onEnd (event) {
+      // Send data.stages to Firebase
+      this.saveStagesToFirebase()
+    },
+
     // Add Topic popup
-    showAddTopicPopup(stage) {
+    showAddTopicPopup (stage) {
       this.add_topic_popup.topic = clone(TOPIC)
       if (stage) {
         this.add_topic_popup.stage_name = stage.name
       }
       this.add_topic_popup.visible = true
     },
-    resetAddTopicPopup() {
-      this.add_topic_popup.topic = clone(TOPIC)
-      let stage_name = this.add_topic_popup.stage_name
-      this.$refs.addTopicForm.reset()
-      this.add_topic_popup.stage_name = stage_name
-    },
-    saveAddTopicPopup() {
-      // Cancel save if form validation fails
-      if (!this.$refs.addTopicForm.validate()) {
-        return
-      }
-      // Save new topic
-      let newTopic = clone(this.add_topic_popup.topic)
-      newTopic.id = uuid()
-      // Even though we loop over all stages, a topic can only be in 1 stage
-      this.stages.forEach((stage) => {
-        if (stage.name === this.add_topic_popup.stage_name) {
-          stage.topics.unshift(newTopic)
-        }
-      })
-      this.saveStagesToFirebase()
-      this.resetAddTopicPopup()
-    },
-    saveAndCloseTopicPopup() {
-      this.add_topic_popup.visible = false
-      this.saveAddTopicPopup()
-    },
-    cancelTopicPopup() {
-      this.add_topic_popup.visible = false
-      this.resetAddTopicPopup()
-    },
-
     // Edit Topic popup
-    showEditTopicPopup(topic) {
+    showEditTopicPopup (topic) {
       this.edit_topic_popup.topic = topic
       this.edit_topic_popup.visible = true
     },
-    saveAndCloseEditTopicPopup() {
-      this.edit_topic_popup.topic = clone(TOPIC)
-      this.saveStagesToFirebase()
-      this.edit_topic_popup.visible = false
-    },
+    // saveAndCloseEditTopicPopup() {
+    //   this.edit_topic_popup.topic = clone(TOPIC)
+    //   this.saveStagesToFirebase()
+    //   this.edit_topic_popup.visible = false
+    // },
 
-    deleteTopicFromStageByIndex(stage, topic_index) {
+    deleteTopicFromStageByIndex (stage, topic_index) {
       stage.topics.splice(topic_index, 1)
       this.saveStagesToFirebase()
     },
-    showStagePopup(stage) {
+    showStagePopup (stage) {
       this.show_stage_popup.stage = stage
       this.show_stage_popup.visible = true
     },
-    requiredRule(value) {
+
+    requiredRule (value) {
       return value !== null && value !== ""
     },
-
-    rowClass(row_index) {
+    rowClass (row_index) {
       if (row_index === 0 && this.$store.state.show.row_state === 10) {
         return 'flex-row-minimized'
       } else if (row_index === 1 && this.$store.state.show.row_state === 1) {
