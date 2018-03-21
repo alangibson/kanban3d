@@ -6,13 +6,11 @@
     <input type="hidden"
            :value="this.data_ready"/>
 
+    {{project}}
+
     <!-- Floating action buttons -->
     <v-layout column
               class="fab-container">
-      <!--<v-btn fab-->
-             <!--v-on:click="toggleRowState">-->
-        <!--<v-icon>lightbulb_outline</v-icon>-->
-      <!--</v-btn>-->
       <v-btn fab
              v-on:click="showAddTopicPopup(stages[0])">
         <v-icon>add</v-icon>
@@ -98,6 +96,7 @@ import Vue from 'vue'
 import _ from 'lodash'
 import firebase from '@firebase/app'
 import '@firebase/database'
+import '@firebase/firestore'
 import draggable from 'vuedraggable'
 // Note: Froala is globally included in index.html
 import VueFroala from 'vue-froala-wysiwyg'
@@ -107,21 +106,25 @@ import { clone, TOPIC, STAGE } from '@/common'
 Vue.use(VueFroala)
 
 // Initialize Firebase
-var config = {
-  apiKey: "AIzaSyDtMhmkNw3dAFX9J1DV3kYUf8SEnjt-MkQ",
-  authDomain: "kanban3d.firebaseapp.com",
-  databaseURL: "https://kanban3d.firebaseio.com",
-  projectId: "kanban3d",
-  storageBucket: "kanban3d.appspot.com",
-  messagingSenderId: "101979808277"
-}
-firebase.initializeApp(config)
+// var config = {
+//   apiKey: "AIzaSyDtMhmkNw3dAFX9J1DV3kYUf8SEnjt-MkQ",
+//   authDomain: "kanban3d.firebaseapp.com",
+//   databaseURL: "https://kanban3d.firebaseio.com",
+//   projectId: "kanban3d",
+//   storageBucket: "kanban3d.appspot.com",
+//   messagingSenderId: "101979808277"
+// }
+// firebase.initializeApp(config)
+let db = firebase.firestore()
 
 export default {
   components: {
     draggable,
     TopicPopup
   },
+  props: [
+    'activeProject'
+  ],
   data() {
     return {
       data_ready: false,
@@ -179,6 +182,17 @@ export default {
       ],
       events: [
       ]
+    }
+  },
+  computed: {
+    project () {
+
+      // console.log(db.collection('projects')
+      //   .doc(this.activeProject.id)
+      //   .get()
+      //   .data())
+      //
+      // return this.activeProject;
     }
   },
   methods: {
@@ -239,18 +253,21 @@ export default {
   },
   mounted() {
     // Load all data from Firebase
-    firebase.database()
-      .ref('stages')
-      .on('value', (snapshot) => {
-        let newStages = snapshot.val()
-        if (newStages === null) {
-          // TODO init data
-          return
-        }
-        _.merge(this.stages, newStages)
-        // HACK
-        this.data_ready = true
-      })
+    // firebase.database()
+    //   .ref('stages')
+    //   .on('value', (snapshot) => {
+    //     let newStages = snapshot.val()
+    //     if (newStages === null) {
+    //       // TODO init data
+    //       return
+    //     }
+    //     _.merge(this.stages, newStages)
+    //     // HACK
+    //     this.data_ready = true
+    //   })
+
+    // TODO dont hard code project id
+    //this.$parent.$options.methods.loadProject('HGSWvH1qiijaSUi7A0Ti')
 
     // Load Froala editor
     $('.froala-editor').froalaEditor(this.froala_config)
