@@ -4,17 +4,13 @@
 
     <!-- HACK -->
     <input type="hidden"
-           :value="this.data_ready"/>
+           :value="$store.state.data_ready"/>
 
     <!-- Floating action buttons -->
     <v-layout column
               class="fab-container">
-      <!--<v-btn fab-->
-             <!--v-on:click="toggleRowState">-->
-        <!--<v-icon>lightbulb_outline</v-icon>-->
-      <!--</v-btn>-->
       <v-btn fab
-             v-on:click="showAddTopicPopup(stages[0])">
+             v-on:click="showAddTopicPopup($store.state.stages[0])">
         <v-icon>add</v-icon>
       </v-btn>
       <v-btn fab
@@ -33,16 +29,16 @@
               :key="index">
         <v-card class="flex-card elevation-4">
           <v-card-title class="subheader">
-            <a @click="showStagePopup(stages[index])">
-              {{ stages[index].name }}
+            <a @click="showStagePopup($store.state.stages[index])">
+              {{ $store.state.stages[index].name }}
             </a>
           </v-card-title>
           <v-card-text class="flex-card-body">
-            <draggable v-model="stages[index].topics"
+            <draggable v-model="$store.state.stages[index].topics"
                        :options="{group:'stages'}"
                        @end="onEnd"
                        class="draggable">
-              <v-card v-for="(topic, index) in stages[index].topics"
+              <v-card v-for="(topic, index) in $store.state.stages[index].topics"
                       :key="index"
                       class="elevation-2 mb-1">
                 <v-card-title @click="showEditTopicPopup(topic)">
@@ -56,8 +52,7 @@
     </v-layout>
 
     <!-- Add Topic Popup -->
-    <topic-popup v-model="add_topic_popup"
-                 :stages="stages">
+    <topic-popup v-model="add_topic_popup">
     </topic-popup>
 
     <v-dialog v-model="show_stage_popup.visible"
@@ -75,7 +70,7 @@
                 <v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>
               </v-list-tile-content>
               <v-list-tile-action>
-                <v-btn @click="deleteTopicFromStageByIndex(show_stage_popup.stage, index)">
+                <v-btn @click="$store.dispatch('deleteTopicFromStageByIndex', {stage: show_stage_popup.stage, topic_index: index})">
                   <v-icon>delete</v-icon>
                 </v-btn>
               </v-list-tile-action>
@@ -86,36 +81,19 @@
     </v-dialog>
 
     <!-- Edit Topic Popup -->
-    <topic-popup v-model="edit_topic_popup"
-                 :stages="stages">
+    <topic-popup v-model="edit_topic_popup">
     </topic-popup>
 
   </v-layout>
 </template>
 
 <script>
-import Vue from 'vue'
 import _ from 'lodash'
 import firebase from '@firebase/app'
 import '@firebase/database'
 import draggable from 'vuedraggable'
-// Note: Froala is globally included in index.html
-import VueFroala from 'vue-froala-wysiwyg'
 import TopicPopup from '@/components/TopicPopup.vue'
 import { clone, TOPIC, STAGE } from '@/common'
-
-Vue.use(VueFroala)
-
-// Initialize Firebase
-var config = {
-  apiKey: "AIzaSyDtMhmkNw3dAFX9J1DV3kYUf8SEnjt-MkQ",
-  authDomain: "kanban3d.firebaseapp.com",
-  databaseURL: "https://kanban3d.firebaseio.com",
-  projectId: "kanban3d",
-  storageBucket: "kanban3d.appspot.com",
-  messagingSenderId: "101979808277"
-}
-firebase.initializeApp(config)
 
 export default {
   components: {
@@ -124,7 +102,6 @@ export default {
   },
   data() {
     return {
-      data_ready: false,
       row_state: 0, // 0 = both open, 1 = top max, bottom min
       add_topic_popup: {
         visible: false,
@@ -140,59 +117,15 @@ export default {
         visible: false,
         stage: clone(STAGE)
       },
-      stages: [
-        {
-          name: 'Soon',
-          topics: [
-          ]
-        },
-        {
-          name: 'In Progress',
-          topics: [
-          ]
-        },
-        {
-          name: 'Paused',
-          topics: []
-        },
-        {
-          name: 'Done',
-          topics: []
-        },
-        {
-          name: 'Someday',
-          topics: [
-          ]
-        },
-        {
-          name: 'Handed Off',
-          topics: []
-        },
-        {
-          name: 'Blocked',
-          topics: []
-        },
-        {
-          name: 'Canceled',
-          topics: []
-        }
-      ],
       events: [
       ]
     }
   },
   methods: {
-    // Save data.stages to Firebase
-    saveStagesToFirebase () {
-      firebase.database()
-        .ref('stages')
-        .set(this.stages)
-    },
-
     // Draggable onEnd method
     onEnd (event) {
       // Send data.stages to Firebase
-      this.saveStagesToFirebase()
+      this.$store.dispatch('saveStagesToFirebase')
     },
 
     // Add Topic popup
@@ -208,16 +141,7 @@ export default {
       this.edit_topic_popup.topic = topic
       this.edit_topic_popup.visible = true
     },
-    // saveAndCloseEditTopicPopup() {
-    //   this.edit_topic_popup.topic = clone(TOPIC)
-    //   this.saveStagesToFirebase()
-    //   this.edit_topic_popup.visible = false
-    // },
 
-    deleteTopicFromStageByIndex (stage, topic_index) {
-      stage.topics.splice(topic_index, 1)
-      this.saveStagesToFirebase()
-    },
     showStagePopup (stage) {
       this.show_stage_popup.stage = stage
       this.show_stage_popup.visible = true
@@ -238,24 +162,7 @@ export default {
     }
   },
   mounted() {
-    // Load all data from Firebase
-    firebase.database()
-      .ref('stages')
-      .on('value', (snapshot) => {
-        let newStages = snapshot.val()
-        if (newStages === null) {
-          // TODO init data
-          return
-        }
-        _.merge(this.stages, newStages)
-        // HACK
-        this.data_ready = true
-      })
-
-    // Load Froala editor
-    $('.froala-editor').froalaEditor(this.froala_config)
-    // Hide Froala license message
-    $('div[style*="z-index:9999"]').hide()
+    this.$store.dispatch('loadFromFirebase')
   }
 }
 </script>
@@ -291,10 +198,5 @@ export default {
   right: 2em;
   max-height: 160px;
   z-index: 100;
-}
-/* Froala */
-.fr-element {
-  /* Allow typing by clicking anywhere in the editor box */
-  height: 100%;
 }
 </style>

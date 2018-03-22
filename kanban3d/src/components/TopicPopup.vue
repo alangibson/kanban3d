@@ -1,6 +1,7 @@
 <template>
   <v-dialog v-model="value.visible"
-            max-width="50vw"
+            max-width="70vw"
+            max-height="10vh"
             :hide-overlay="true">
     <v-card>
       <v-card-title>
@@ -18,32 +19,37 @@
                     :rules="[requiredRule]"
                     required />
 
-                <!--<v-text-field-->
-                <!--v-model="add_topic_popup.topic.description"-->
-                <!--label="How and Why"-->
-                <!--multi-line-->
-                <!--rows="7"/>-->
-                <froala v-model="value.topic.description"
-                        :config="froala_config">
-                </froala>
+                <quill-editor v-model="value.topic.description"
+                              ref="quillEditor"
+                              :options="editor_config">
+                </quill-editor>
 
-                <v-text-field
-                    v-model="value.topic.who"
-                    label="Who" />
-                <v-text-field
-                    v-model="value.topic.when"
-                    label="When" />
-                <v-text-field
-                    v-model="value.topic.where"
-                    label="Where" />
+                <v-layout wrap>
+                  <v-flex md4>
+                    <v-text-field
+                        v-model="value.topic.who"
+                        label="Who" />
+                  </v-flex>
+                  <v-flex md4>
+                    <v-text-field
+                        v-model="value.topic.when"
+                        label="When" />
+                  </v-flex>
+                  <v-flex md4>
+                    <v-text-field
+                      v-model="value.topic.where"
+                      label="Where" />
+                  </v-flex>
+                </v-layout>
               </v-flex>
-              <v-flex xs12>
+              <v-flex xs12
+                      v-if="value.stage_name">
                 <v-select
                     label="Stage"
                     required
                     :rules="[requiredRule]"
                     v-model="value.stage_name"
-                    :items="stages"
+                    :items="$store.state.stages"
                     item-text="name"
                     item-value="name" />
               </v-flex>
@@ -75,25 +81,39 @@
 </template>
 
 <script>
+import Vue from 'vue'
 import uuid from 'uuid/v4'
 import { clone, TOPIC, STAGE } from '@/common'
 
+// import MagicUrl from 'quill-magic-url';
+
+// import Quill from 'quill';
+
+// Note: VueQuillEditor is globally imported in index.html
+Vue.use(VueQuillEditor)
+
+// Quill.register('modules/magicUrl', MagicUrl);
+
 export default {
   props: [
-    'value',
-    'stages'
+    'value'
   ],
   data: () => ({
-    froala_config: {
-      toolbarInline: true,
-      charCounterCount: false,
-      height: '30vh',
-      toolbarButtons: ['bold', 'italic', 'underline', 'strikeThrough', 'color', 'emoticons', '-', 'paragraphFormat',
-        'align', 'formatOL', 'formatUL', 'indent', 'outdent', '-', 'insertImage', 'insertLink', 'insertFile',
-        'insertVideo', 'undo', 'redo'],
-      editorClass: 'froala-editor-box',
-      placeholderText: 'How and Why',
-      zIndex: 666
+    editor_config: {
+      theme: 'snow',
+      placeholder: "How and Why",
+      modules: {
+        toolbar: [
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+          [{ 'color': [] }, { 'background': [] }],
+          [{ 'font': [] }],
+          [{ 'align': [] }],
+          ['link', 'image'],
+          ['clean']
+        ]
+      }
     }
   }),
   methods: {
@@ -114,16 +134,7 @@ export default {
       // Save new topic
       let newTopic = clone(this.value.topic)
       newTopic.id = uuid()
-      // Even though we loop over all stages, a topic can only be in 1 stage
-      this.stages.forEach((stage) => {
-        if (stage.name === this.value.stage_name) {
-          stage.topics.unshift(newTopic)
-        }
-      })
-
-      // FIXME Call this on parent?
-      // this.saveStagesToFirebase()
-
+      this.$store.dispatch('addTopicToStage', { topic: newTopic, stage_name: this.value.stage_name});
       this.resetTopicPopup()
     },
     saveAndCloseTopicPopup () {
@@ -137,3 +148,16 @@ export default {
   }
 }
 </script>
+
+<style>
+.ql-container {
+  font-size: 14px;
+}
+.ql-editor {
+  /* Allow typing by clicking anywhere in the editor box */
+  height: 30vh;
+}
+.ql-toolbar {
+  z-index: 9999;
+}
+</style>

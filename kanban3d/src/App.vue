@@ -104,7 +104,7 @@ export default {
         var email = error.email
         // The firebase.auth.AuthCredential type that was used.
         var credential = error.credential
-        if (errorCode === 'auth/account-exists-with-different-credential') {
+        if (errorCode === 'auth/accou0nt-exists-with-different-credential') {
           // TODO no alerts!
           alert('You have already signed up with a different auth provider for that email.')
           // If you are using multiple auth providers on your app you should handle linking
