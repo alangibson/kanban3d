@@ -82,17 +82,24 @@
 
 <script>
 import Vue from 'vue'
-import uuid from 'uuid/v4'
 import { clone, TOPIC, STAGE } from '@/common'
 
-// import MagicUrl from 'quill-magic-url';
-
-// import Quill from 'quill';
-
+// import VueQuillEditor from 'vue-quill-editor'
 // Note: VueQuillEditor is globally imported in index.html
-Vue.use(VueQuillEditor)
-
-// Quill.register('modules/magicUrl', MagicUrl);
+// https://cdn.jsdelivr.net/npm/quill-auto-links@0.1.2/dist/index.min.js
+// https://cdn.jsdelivr.net/npm/quill-magic-url@0.1.0/dist/index.min.js
+// import MagicUrl from 'quill-magic-url'
+// import AutoLinks from 'quill-auto-links'
+// Quill.register('modules/magicUrl', MagicUrl)
+// Quill.register('modules/auto-links', AutoLinks)
+Vue.use(VueQuillEditor,
+  {
+    modules: {
+      // magicUrl: true,
+      // 'auto-links': true
+    }
+  }
+)
 
 export default {
   props: [
@@ -133,7 +140,6 @@ export default {
       }
       // Save new topic
       let newTopic = clone(this.value.topic)
-      newTopic.id = uuid()
       this.$store.dispatch('addTopicToStage', { topic: newTopic, stage_name: this.value.stage_name});
       this.resetTopicPopup()
     },

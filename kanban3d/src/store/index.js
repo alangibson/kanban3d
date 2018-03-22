@@ -2,6 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from '@firebase/app'
 import '@firebase/database'
+import uuid from 'uuid/v4'
 
 // Initialize Firebase
 var config = {
@@ -102,12 +103,18 @@ const actions = {
 
 const mutations = {
   addTopicToStage (context, { topic, stage_name }) {
-    // Even though we loop over all stages, a topic can only be in 1 stage
-    context.stages.forEach((stage) => {
-      if (stage.name === stage_name) {
-        stage.topics.unshift(topic)
-      }
-    })
+    // Update, don't create new, if topic.id exists
+    if (!topic.id) {
+      topic.id = uuid()
+      // Even though we loop over all stages, a topic can only be in 1 stage
+      context.stages.forEach((stage) => {
+        if (stage.name === stage_name) {
+          stage.topics.unshift(topic)
+        }
+      })
+    } else {
+      // TODO do nothing?
+    }
   }
 }
 
