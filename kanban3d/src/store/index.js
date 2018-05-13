@@ -1,19 +1,28 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from '@firebase/app'
-import '@firebase/database'
+import '@firebase/firestore'
 import uuid from 'uuid/v4'
 
-// Initialize Firebase
-var config = {
-  apiKey: "AIzaSyDtMhmkNw3dAFX9J1DV3kYUf8SEnjt-MkQ",
-  authDomain: "kanban3d.firebaseapp.com",
-  databaseURL: "https://kanban3d.firebaseio.com",
-  projectId: "kanban3d",
-  storageBucket: "kanban3d.appspot.com",
-  messagingSenderId: "101979808277"
-}
-firebase.initializeApp(config)
+/*
+ * Firebase Configuration
+ */
+
+firebase.initializeApp({
+  apiKey: "???",
+  authDomain: "ichi-ban.firebaseapp.com",
+  databaseURL: "https://ichi-ban.firebaseio.com",
+  storageBucket: "ichi-ban.appspot.com",
+  messagingSenderId: "???",
+  projectId: "ichi-ban",
+})
+
+// Initialize Cloud Firestore through Firebase
+var db = firebase.firestore()
+
+/*
+ * Vue Configuration
+ */
 
 Vue.use(Vuex)
 
