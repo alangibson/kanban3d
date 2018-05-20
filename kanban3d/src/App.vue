@@ -6,6 +6,7 @@
         fixed
         v-model="$store.state.drawer">
       <v-list dense>
+
         <v-list-tile v-if="!is_logged_in" @click="logIn">
           <v-list-tile-action>
             <v-icon>lock_outline</v-icon>
@@ -22,6 +23,26 @@
             <v-list-tile-title>Log Out</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
+
+        <v-list-tile>
+          <v-list-tile-content>
+            <v-list-tile-title>Project</v-list-tile-title>
+            <v-select
+                :items="$store.state.projects"
+                v-model="selectedProject"
+                item-text="name"
+                item-value="id"
+                label="Select"
+                single-line>
+            </v-select>
+          </v-list-tile-content>
+        </v-list-tile>
+        <v-list-tile>
+          <v-list-tile-content>
+            <button @click="showNewProjectPopup">New Project</button>
+          </v-list-tile-content>
+        </v-list-tile>
+
         <v-list-tile>
           <v-list-tile-title>Visibility</v-list-tile-title>
         </v-list-tile>
@@ -72,6 +93,22 @@ export default {
   computed: {
     showLogInOverlay() {
       return !this.is_logged_in
+    },
+    project () {
+      if (this.$store.state.project) {
+        return this.$store.state.project;
+      } else {
+        // HACK
+        return {name: ""};
+      }
+    },
+    selectedProject: {
+      get () {
+        return this.$store.state.project;
+      },
+      set (project_id) {
+        this.$store.dispatch('selectProjectById', project_id);
+      }
     }
   },
   data: () => ({
@@ -129,14 +166,23 @@ export default {
         rowState = rowState + 10
       }
       this.$store.state.show.row_state = rowState
-    }
+    },
 
+    showNewProjectPopup () {
+      // TODO
+    },
+
+    newProject (project_name) {
+      this.$store.dispatch('newProject', { project_name });
+    }
   },
   mounted() {
+    console.log('App mounted')
     firebase.auth().onAuthStateChanged((user) => {
       if (user) {
         // User is signed in.
         this.is_logged_in = true
+        this.$store.dispatch('setAuthenticatedUser', { user });
 
         // TODO clear overlay
 

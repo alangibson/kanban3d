@@ -49,7 +49,7 @@
                     required
                     :rules="[requiredRule]"
                     v-model="value.stage_name"
-                    :items="$store.state.stages"
+                    :items="stages"
                     item-text="name"
                     item-value="name" />
               </v-flex>
@@ -123,6 +123,13 @@ export default {
       }
     }
   }),
+  computed: {
+    stages () {
+      if (this.$store.state.project) {
+        return this.$store.state.project.stages;
+      }
+    }
+  },
   methods: {
     requiredRule (value) {
       return value !== null && value !== ""

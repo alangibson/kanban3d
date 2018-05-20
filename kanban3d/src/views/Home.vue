@@ -2,6 +2,10 @@
   <v-layout column
             class="flex-column">
 
+    <!--<pre>-->
+      <!--{{$store.state.project}}-->
+    <!--</pre>-->
+
     <!-- HACK -->
     <input type="hidden"
            :value="$store.state.data_ready"/>
@@ -10,7 +14,7 @@
     <v-layout column
               class="fab-container">
       <v-btn fab
-             v-on:click="showAddTopicPopup($store.state.stages[0])">
+             v-on:click="showAddTopicPopup($store.state.project.stages[0])">
         <v-icon>add</v-icon>
       </v-btn>
       <v-btn fab
@@ -22,32 +26,12 @@
     <!-- Stages -->
     <v-layout row
               :class="rowClass(index)"
-              v-for="(s, index) in [[0,1,2,3], [4,5,6,7]]">
+              v-for="(s, index) in rowChunks()">
       <v-flex xs3
               v-for="index in s"
               class="flex-item"
               :key="index">
-        <v-card class="flex-card elevation-4">
-          <v-card-title class="subheader">
-            <a @click="showStagePopup($store.state.stages[index])">
-              {{ $store.state.stages[index].name }}
-            </a>
-          </v-card-title>
-          <v-card-text class="flex-card-body">
-            <draggable v-model="$store.state.stages[index].topics"
-                       :options="{group:'stages'}"
-                       @end="onEnd"
-                       class="draggable">
-              <v-card v-for="(topic, index) in $store.state.stages[index].topics"
-                      :key="index"
-                      class="elevation-2 mb-1">
-                <v-card-title @click="showEditTopicPopup(topic)">
-                  {{ topic.name }}
-                </v-card-title>
-              </v-card>
-            </draggable>
-          </v-card-text>
-        </v-card>
+        <stage :index="index"></stage>
       </v-flex>
     </v-layout>
 
@@ -55,30 +39,30 @@
     <topic-popup v-model="add_topic_popup">
     </topic-popup>
 
-    <v-dialog v-model="show_stage_popup.visible"
-              max-width="50vw">
-      <v-card>
-        <v-card-title>
-          <span class="headline">{{ show_stage_popup.stage.name }}</span>
-        </v-card-title>
-        <v-card-text>
-          <v-list>
-            <v-list-tile v-for="(topic, index) in show_stage_popup.stage.topics"
-                         :key="index">
-              <v-list-tile-content>
-                <v-list-tile-title v-html="topic.name"></v-list-tile-title>
-                <v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>
-              </v-list-tile-content>
-              <v-list-tile-action>
-                <v-btn @click="$store.dispatch('deleteTopicFromStageByIndex', {stage: show_stage_popup.stage, topic_index: index})">
-                  <v-icon>delete</v-icon>
-                </v-btn>
-              </v-list-tile-action>
-            </v-list-tile>
-          </v-list>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <!--<v-dialog v-model="show_stage_popup.visible"-->
+              <!--max-width="50vw">-->
+      <!--<v-card>-->
+        <!--<v-card-title>-->
+          <!--<span class="headline">{{ show_stage_popup.stage.name }}</span>-->
+        <!--</v-card-title>-->
+        <!--<v-card-text>-->
+          <!--<v-list>-->
+            <!--<v-list-tile v-for="(topic, index) in show_stage_popup.stage.topics"-->
+                         <!--:key="index">-->
+              <!--<v-list-tile-content>-->
+                <!--<v-list-tile-title v-html="topic.name"></v-list-tile-title>-->
+                <!--<v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>-->
+              <!--</v-list-tile-content>-->
+              <!--<v-list-tile-action>-->
+                <!--<v-btn @click="$store.dispatch('deleteTopicFromStageByIndex', {stage: show_stage_popup.stage, topic_index: index})">-->
+                  <!--<v-icon>delete</v-icon>-->
+                <!--</v-btn>-->
+              <!--</v-list-tile-action>-->
+            <!--</v-list-tile>-->
+          <!--</v-list>-->
+        <!--</v-card-text>-->
+      <!--</v-card>-->
+    <!--</v-dialog>-->
 
     <!-- Edit Topic Popup -->
     <topic-popup v-model="edit_topic_popup">
@@ -88,17 +72,19 @@
 </template>
 
 <script>
-import _ from 'lodash'
-import firebase from '@firebase/app'
-import '@firebase/database'
-import draggable from 'vuedraggable'
-import TopicPopup from '@/components/TopicPopup.vue'
-import { clone, TOPIC, STAGE } from '@/common'
+import _ from 'lodash';
+import firebase from '@firebase/app';
+import '@firebase/database';
+import draggable from 'vuedraggable';
+import TopicPopup from '@/components/TopicPopup.vue';
+import Stage from '@/components/Stage.vue';
+import { clone, TOPIC, STAGE } from '@/common';
 
 export default {
   components: {
     draggable,
-    TopicPopup
+    TopicPopup,
+    Stage
   },
   data() {
     return {
@@ -116,18 +102,10 @@ export default {
       show_stage_popup: {
         visible: false,
         stage: clone(STAGE)
-      },
-      events: [
-      ]
+      }
     }
   },
   methods: {
-    // Draggable onEnd method
-    onEnd (event) {
-      // Send data.stages to Firebase
-      this.$store.dispatch('saveStagesToFirebase')
-    },
-
     // Add Topic popup
     showAddTopicPopup (stage) {
       this.add_topic_popup.topic = clone(TOPIC)
@@ -135,11 +113,6 @@ export default {
         this.add_topic_popup.stage_name = stage.name
       }
       this.add_topic_popup.visible = true
-    },
-    // Edit Topic popup
-    showEditTopicPopup (topic) {
-      this.edit_topic_popup.topic = topic
-      this.edit_topic_popup.visible = true
     },
 
     showStagePopup (stage) {
@@ -159,10 +132,18 @@ export default {
         return 'flex-row'
       }
       return 'flex-row-maximized'
+    },
+    rowChunks () {
+      // [[0,1,2,3], [4,5,6,7]]
+      if (this.$store.state.project) {
+        return _.chunk(_.range(this.$store.state.project.stages.length), 4);
+      }
     }
   },
   mounted() {
-    this.$store.dispatch('loadFromFirebase')
+    console.log('Home mounted');
+    // this.$store.dispatch('loadFromFirebase');
+    // this.$store.dispatch('listenToFirestore');
   }
 }
 </script>
