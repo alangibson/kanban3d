@@ -132,31 +132,34 @@ export default {
   },
   methods: {
     requiredRule (value) {
-      return value !== null && value !== ""
+      return value !== null && value !== "";
     },
     resetTopicPopup () {
-      this.value.topic = clone(TOPIC)
-      let stage_name = this.value.stage_name
-      this.$refs.topicForm.reset()
-      this.value.stage_name = stage_name
+      this.value.topic = clone(TOPIC);
+      let stage_name = this.value.stage_name;
+      this.$refs.topicForm.reset();
+      this.value.stage_name = stage_name;
     },
     saveTopicPopup () {
       // Cancel save if form validation fails
       if (!this.$refs.topicForm.validate()) {
-        return
+        return;
       }
       // Save new topic
-      let newTopic = clone(this.value.topic)
-      this.$store.dispatch('addTopicToStage', { topic: newTopic, stage_name: this.value.stage_name});
-      this.resetTopicPopup()
+      let newTopic = clone(this.value.topic);
+      this.$store.dispatch('addTopicToStage', {
+        topic: newTopic,
+        stage_name: this.value.stage_name
+      });
+      this.resetTopicPopup();
     },
     saveAndCloseTopicPopup () {
-      this.value.visible = false
-      this.saveTopicPopup()
+      this.value.visible = false;
+      this.saveTopicPopup();
     },
     cancelTopicPopup () {
-      this.value.visible = false
-      this.resetTopicPopup()
+      this.value.visible = false;
+      this.resetTopicPopup();
     }
   }
 }

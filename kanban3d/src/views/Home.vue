@@ -2,10 +2,6 @@
   <v-layout column
             class="flex-column">
 
-    <!--<pre>-->
-      <!--{{$store.state.project}}-->
-    <!--</pre>-->
-
     <!-- HACK -->
     <input type="hidden"
            :value="$store.state.data_ready"/>
@@ -35,37 +31,38 @@
       </v-flex>
     </v-layout>
 
+    <!-- Stage popup -->
+    <v-dialog v-model="$store.state.show_stage_popup.visible"
+              max-width="50vw">
+      <v-card>
+        <v-card-title>
+          <span class="headline">{{ $store.state.show_stage_popup.stage.name }}</span>
+        </v-card-title>
+        <v-card-text>
+          <v-list>
+            <v-list-tile v-for="(topic, index) in $store.state.show_stage_popup.stage.topics"
+                         :key="index">
+              <v-list-tile-content>
+                <v-list-tile-title v-html="topic.name"></v-list-tile-title>
+                <v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                <v-btn @click="$store.dispatch('deleteTopicFromStageByIndex', {stage: $store.state.show_stage_popup.stage, topic_index: index})">
+                  <v-icon>delete</v-icon>
+                </v-btn>
+              </v-list-tile-action>
+            </v-list-tile>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
     <!-- Add Topic Popup -->
-    <topic-popup v-model="add_topic_popup">
+    <topic-popup v-model="$store.state.add_topic_popup">
     </topic-popup>
 
-    <!--<v-dialog v-model="show_stage_popup.visible"-->
-              <!--max-width="50vw">-->
-      <!--<v-card>-->
-        <!--<v-card-title>-->
-          <!--<span class="headline">{{ show_stage_popup.stage.name }}</span>-->
-        <!--</v-card-title>-->
-        <!--<v-card-text>-->
-          <!--<v-list>-->
-            <!--<v-list-tile v-for="(topic, index) in show_stage_popup.stage.topics"-->
-                         <!--:key="index">-->
-              <!--<v-list-tile-content>-->
-                <!--<v-list-tile-title v-html="topic.name"></v-list-tile-title>-->
-                <!--<v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>-->
-              <!--</v-list-tile-content>-->
-              <!--<v-list-tile-action>-->
-                <!--<v-btn @click="$store.dispatch('deleteTopicFromStageByIndex', {stage: show_stage_popup.stage, topic_index: index})">-->
-                  <!--<v-icon>delete</v-icon>-->
-                <!--</v-btn>-->
-              <!--</v-list-tile-action>-->
-            <!--</v-list-tile>-->
-          <!--</v-list>-->
-        <!--</v-card-text>-->
-      <!--</v-card>-->
-    <!--</v-dialog>-->
-
     <!-- Edit Topic Popup -->
-    <topic-popup v-model="edit_topic_popup">
+    <topic-popup v-model="$store.state.edit_topic_popup">
     </topic-popup>
 
   </v-layout>
@@ -88,38 +85,13 @@ export default {
   },
   data() {
     return {
-      row_state: 0, // 0 = both open, 1 = top max, bottom min
-      add_topic_popup: {
-        visible: false,
-        stage: {},
-        stage_name: null,
-        topic: clone(TOPIC)
-      },
-      edit_topic_popup: {
-        visible: false,
-        topic: clone(TOPIC)
-      },
-      show_stage_popup: {
-        visible: false,
-        stage: clone(STAGE)
-      }
+      row_state: 0 // 0 = both open, 1 = top max, bottom min
     }
   },
   methods: {
-    // Add Topic popup
     showAddTopicPopup (stage) {
-      this.add_topic_popup.topic = clone(TOPIC)
-      if (stage) {
-        this.add_topic_popup.stage_name = stage.name
-      }
-      this.add_topic_popup.visible = true
+      this.$store.commit('showAddTopicPopup', stage);
     },
-
-    showStagePopup (stage) {
-      this.show_stage_popup.stage = stage
-      this.show_stage_popup.visible = true
-    },
-
     requiredRule (value) {
       return value !== null && value !== ""
     },
@@ -142,8 +114,6 @@ export default {
   },
   mounted() {
     console.log('Home mounted');
-    // this.$store.dispatch('loadFromFirebase');
-    // this.$store.dispatch('listenToFirestore');
   }
 }
 </script>

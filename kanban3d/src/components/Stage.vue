@@ -38,14 +38,6 @@ export default {
   props: [
     'index'
   ],
-  data () {
-    return {
-      edit_topic_popup: {
-        visible: false,
-        topic: clone(TOPIC)
-      }
-    }
-  },
   computed: {
     stage () {
       if (this.$store.state.project) {
@@ -67,10 +59,11 @@ export default {
     }
   },
   methods: {
-    // Edit Topic popup
     showEditTopicPopup (topic) {
-      this.edit_topic_popup.topic = topic
-      this.edit_topic_popup.visible = true
+      this.$store.commit('showEditTopicPopup', topic);
+    },
+    showStagePopup (stage) {
+      this.$store.commit('showStagePopup', stage);
     },
     handleDrop (event) {
       this.$store.dispatch('addEvent', {
