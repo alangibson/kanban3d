@@ -125,9 +125,7 @@ export default {
   }),
   computed: {
     stages () {
-      if (this.$store.state.project) {
-        return this.$store.state.project.stages;
-      }
+      return this.$store.getters.project.stages;
     }
   },
   methods: {
@@ -146,10 +144,11 @@ export default {
         return;
       }
       // Save new topic
-      let newTopic = clone(this.value.topic);
-      this.$store.dispatch('addTopicToStage', {
-        topic: newTopic,
-        stage_name: this.value.stage_name
+      console.log('this.value.stage', this.value.stage.id);
+      // let newTopic = clone(this.value.topic);
+      this.$store.dispatch('saveTopicToStageById', {
+        topic: this.value.topic,
+        stage_id: this.value.stage.id
       });
       this.resetTopicPopup();
     },

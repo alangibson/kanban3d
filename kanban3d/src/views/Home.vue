@@ -10,7 +10,7 @@
     <v-layout column
               class="fab-container">
       <v-btn fab
-             v-on:click="showAddTopicPopup($store.state.project.stages[0])">
+             v-on:click="showAddTopicPopup()">
         <v-icon>add</v-icon>
       </v-btn>
       <v-btn fab
@@ -27,7 +27,11 @@
               v-for="index in s"
               class="flex-item"
               :key="index">
-        <stage :index="index"></stage>
+        <!--<stage :index="index"-->
+               <!--:stage="$store.state.stages[$store.getters.project.stages[index].id]"-->
+               <!--:stageId="$store.getters.project.stages[index].id"></stage>-->
+        <stage :index="index"
+               :stage="stageByIndex(index)"></stage>
       </v-flex>
     </v-layout>
 
@@ -90,7 +94,18 @@ export default {
   },
   methods: {
     showAddTopicPopup (stage) {
+      if (! this.$store.getters.project) {
+        return;
+      }
+      // Default to first Stage
+      console.log('showAddTopicPopup', stage, this.$store.getters.project.stages[0]);
+      if (! stage) {
+        stage = this.$store.getters.project.stages[0];
+      }
       this.$store.commit('showAddTopicPopup', stage);
+    },
+    stageByIndex (index) {
+      return this.$store.getters.project.stages[index];
     },
     requiredRule (value) {
       return value !== null && value !== ""
@@ -107,8 +122,8 @@ export default {
     },
     rowChunks () {
       // [[0,1,2,3], [4,5,6,7]]
-      if (this.$store.state.project) {
-        return _.chunk(_.range(this.$store.state.project.stages.length), 4);
+      if (this.$store.getters.project) {
+        return _.chunk(_.range(this.$store.getters.project.stages.length), 4);
       }
     }
   },

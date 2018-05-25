@@ -3,8 +3,18 @@ service cloud.firestore {
     match /projects/{project} {
       allow read, write: if resource.data.owner_id == request.auth.uid;
 
+      function projectDoc() {
+        return get(/databases/$(database)/documents/projects/$(project)).data;
+      }
+
       match /events/{event} {
-      	allow read, write: if get(/databases/$(database)/documents/projects/$(project)).data.owner_id == request.auth.uid;
+      	allow read, write: if projectDoc().owner_id == request.auth.uid;
+      }
+      match /topics/{topic} {
+        allow read, write: if projectDoc().owner_id == request.auth.uid;
+      }
+      match /stages/{stage} {
+        allow read, write: if projectDoc().owner_id == request.auth.uid;
       }
     }
   }

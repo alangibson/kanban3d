@@ -28,7 +28,7 @@
           <v-list-tile-content>
             <v-list-tile-title>Project</v-list-tile-title>
             <v-select
-                :items="$store.state.projects"
+                :items="projects"
                 v-model="selectedProject"
                 item-text="name"
                 item-value="id"
@@ -94,17 +94,22 @@ export default {
     showLogInOverlay() {
       return !this.is_logged_in
     },
-    project () {
-      if (this.$store.state.project) {
-        return this.$store.state.project;
-      } else {
-        // HACK
-        return {name: ""};
-      }
+    projects () {
+      let projects = [];
+      _.forOwn(this.$store.state.projects, (value, key) => {
+        projects.push({
+          id: key,
+          name: value.name
+        });
+      });
+      console.log('projects', projects, this.$store.state.projects);
+      return projects;
     },
     selectedProject: {
       get () {
-        return this.$store.state.project;
+        let x = this.$store.getters.project;
+        console.log('selectedProject get', x);
+        return x;
       },
       set (project_id) {
         this.$store.dispatch('selectProjectById', project_id);

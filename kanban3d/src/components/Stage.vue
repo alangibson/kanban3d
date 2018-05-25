@@ -2,7 +2,7 @@
   <v-card class="flex-card elevation-4">
     <v-card-title class="subheader">
       <a @click="showStagePopup(stage)">
-        {{ stage.name }}
+        {{ stageName }}
       </a>
     </v-card-title>
     <v-card-text class="flex-card-body">
@@ -11,7 +11,7 @@
                  @change="handleChange"
                  @end="handleDrop"
                  :data-stage-index="index"
-                 :data-stage-id="stage.id"
+                 :data-stage-id="stageId"
                  class="draggable">
         <v-card v-for="(topic, index) in topics"
                 :key="index"
@@ -36,24 +36,45 @@ export default {
     draggable
   },
   props: [
-    'index'
+    'index',
+    'stage',
+    // 'stageId'
   ],
   computed: {
-    stage () {
-      if (this.$store.state.project) {
-        return this.$store.state.project.stages[this.index];
+    // stage () {
+    //   console.log('rerender stage', this.stageId);
+    //   return this.$store.state.stages[this.stageId];
+    // },
+    stageId () {
+      if (! this.stage) {
+        return;
       }
+      return this.stage.id;
+    },
+    stageName () {
+      if (! this.stage) {
+        return;
+      }
+      return this.stage.name;
     },
     topics: {
+      // get () {
+      //   console.log('rerender topics', this.stageId);
+      //   return this.$store.state.stages[this.stageId].topics
+      //     .map(topicRef => this.$store.state.topics[topicRef.id]);
+      // },
       get () {
-        if (this.$store.state.project) {
-          return this.$store.state.project.stages[this.index].topics;
+        if (! this.stage) {
+          return;
         }
+        console.log('rerender topics', this.stage.id);
+        return this.$store.state.stages[this.stage.id].topics
+          .map(topicRef => this.$store.state.topics[topicRef.id]);
       },
       set (value) {
         this.$store.dispatch('setTopicsInStage', {
           topics: value,
-          stage_index: this.index
+          stage: this.stage
         })
       }
     }
@@ -63,6 +84,9 @@ export default {
       this.$store.commit('showEditTopicPopup', topic);
     },
     showStagePopup (stage) {
+      if (! stage) {
+        return;
+      }
       this.$store.commit('showStagePopup', stage);
     },
     handleDrop (event) {

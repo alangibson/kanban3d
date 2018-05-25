@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import Vue from 'vue'
 import Vuex from 'vuex'
 import firebase from '@firebase/app'
@@ -45,6 +46,7 @@ const state = {
   },
   edit_topic_popup: {
     visible: false,
+    stage: {},
     topic: clone(TOPIC)
   },
   show_stage_popup: {
@@ -52,21 +54,74 @@ const state = {
     stage: clone(STAGE)
   },
   user: null,
-  projects: [],
-  project: null,
-  events: [
-  ]
-}
+  activeProjectId: null,
+  projects: {},
+  stages: {},
+  topics: {},
+  events: []
+};
+
+const getters = {
+  project (state) {
+    if (! state.projects[state.activeProjectId]) {
+      return;
+    }
+    console.log('getters project', state.projects[state.activeProjectId]);
+    let project = {};
+    _.assign(project, state.projects[state.activeProjectId]);
+    project.stages = state.projects[state.activeProjectId].stages
+      .map(stageRef => state.stages[stageRef.id]);
+    return project;
+  }
+};
 
 const actions = {
   setAuthenticatedUser (context, { user }) {
     context.commit('setAuthenticatedUser', user);
     context.dispatch('listenToFirestore');
   },
-  addTopicToStage (context, { topic, stage_name }) {
-    context.commit('addTopicToStage', { topic, stage_name });
-    context.dispatch('saveToFirestore');
-    // TODO need stageIndex
+  saveTopicToStageById (context, { topic, stage_id }) {
+    console.log('addTopicToStageById', topic, topic.id, stage_id);
+    
+    // Updating existing topic or create new topic
+    if (context.state.topics[topic.id]) {
+      // Topic already exists. Just need to update
+      db.collection('projects')
+        .doc(context.getters.project.id)
+        .collection('topics')
+        .doc(topic.id)
+        .update(topic);
+    } else {
+      // Topic doesnt exist. Need to add.
+      db.collection('projects')
+        .doc(context.getters.project.id)
+        .collection('topics')
+        .add(topic)
+        .then(topicRef => {
+      
+          // Find stage in stages collection by id, then add topic ref to topics array
+          // Dont update local data structure!
+          console.log('stage_id', stage_id);
+          db.collection('projects')
+            .doc(context.getters.project.id)
+            .collection('stages')
+            .doc(stage_id)
+            .get()
+            .then(stageSnapshot => {
+          
+              let stage = stageSnapshot.data();
+              stage.topics.unshift(topicRef);
+              db.collection('projects')
+                .doc(context.getters.project.id)
+                .collection('stages')
+                .doc(stage_id)
+                .update(stage);
+          
+            });
+        });
+    }
+    
+    // TODO create event
     // context.dispatch('addEvent', {
     //   type: 'TOPIC_CREATED',
     //   topicId: topic.id,
@@ -75,89 +130,82 @@ const actions = {
     //   createdAt: new Date()
     // });
   },
+  // deleteTopicFromStageByIndex (context, { stage, topic_index }) {
+  //   stage.topics.splice(topic_index, 1);
+  //   context.dispatch('saveToFirestore');
+  // },
   deleteTopicFromStageByIndex (context, { stage, topic_index }) {
-    stage.topics.splice(topic_index, 1);
-    context.dispatch('saveToFirestore');
-  },
-  setTopicsInStage (context, {topics, stage_index}) {
-    context.commit('setTopicsInStage', {topics, stage_index});
+    let topicId = stage.topics[topic_index].id;
+    // Delete Topic from topics collection
+    db.collection('projects')
+      .doc(context.state.project.id)
+      .collection('topics')
+      .doc(topicId)
+      .delete()
+      .then(() => {
+        console.log('topic deleted', topicId);
+      })
+      .catch((error) => {
+        console.error('Failed to delete topic', topicId);;
+      });
     
+    // TODO delete entry from stage.topics
+    
+  },
+  setTopicsInStage (context, {topics, stage}) {
+    console.log('setTopicsInStage', stage.id, context.getters.project.id, topics, context.state.topics[topics[0].id]);
+
     // TODO add event
     // context.dispatch('addEvent', {event_type: 'TOPIC_MOVED', topic: })
     
-    context.dispatch('saveToFirestore');
+    // Update local state
+    context.commit('setTopicsInStage', {topics, stage});
+    
+    // Update Firestore
+    let topicRefs = topics.map(topic => db.doc(topic.ref.path));
+    db.collection('projects')
+      .doc(context.getters.project.id)
+      .collection('stages')
+      .doc(stage.id)
+      .get()
+      .then(stageSnapshot => {
+        let newStage = stageSnapshot.data();
+        newStage.topics = topicRefs;
+        db.collection('projects')
+          .doc(context.getters.project.id)
+          .collection('stages')
+          .doc(stage.id)
+          .update(newStage);
+      });
   },
   selectProjectById (context, project_id) {
-    // db.collection('projects')
-    //   .doc(project_id)
-    //   .get()
-    //   .then(projectSnapshot => {
-    //     let project = projectSnapshot.data();
-    //     project.id = projectSnapshot.id;
-    //     this.commit('setProject', project);
-    //   });
+    context.commit('setActiveProjectId', project_id);
     context.dispatch('listenToFirestore', project_id);
   },
   newProject (context, { project_name }) {
     let user = firebase.auth().currentUser;
-    
     if (!user) {
       console.error('Cant create new project. Not logged in!');
       return;
     }
-    
     let project = {
       name: project_name,
       owner_id: user.uid,
       version: 1,
       stages: [
-        {
-          name: "Soon",
-          topics: []
-        },
-        {
-          name: "In Progress",
-          topics: []
-        },
-        {
-          name: "Paused",
-          topics: []
-        },
-        {
-          name: "Done",
-          topics: []
-        },
-        {
-          name: "Someday",
-          topics: []
-        },
-        {
-          name: "Handed Off",
-          topics: []
-        },
-        {
-          name: "Blocked",
-          topics: []
-        },
-        {
-          name: "Canceled",
-          topics: []
-        }
       ]
     };
-    
+    // Save new project and make it our active project
     db.collection('projects')
       .add(project)
       .then(projectRef => {
-        // Set current project to projectRef
-        project.id = projectRef.id;
-        context.commit('setProject', project);
+        context.dispatch('selectProjectById', projectRef.id);
       });
   },
   addEvent (context, { type, topicId, fromStageIndex, toStageIndex, createdAt }) {
     // TODO save stage names
     db.collection('projects')
-      .doc(context.state.project.id)
+      .doc(context.getters.project.id)
       .collection('events')
       .add({
         type,
@@ -167,85 +215,67 @@ const actions = {
         createdAt
       });
   },
-  saveToFirestore (context) {
-    db.collection('projects')
-      .doc(context.state.project.id)
-      .set(context.state.project);
-  },
-  loadFromFirebase (context) {
-    console.log('loadFromFirebase');
-
-    let projectId = 'rsLQGIzVT80h4Z1VNA70';
-    context.dispatch('selectProjectById', projectId);
-  
-    // Set list of project names
-    db.collection('projects')
-      .where('owner_id', '==', context.state.user.uid)
-      .then(querySnapshot => {
-        let projects = [];
-        querySnapshot.forEach(project => {
-          projects.push({
-            id: project.id,
-            name: project.get('name')
-          });
-        });
-        context.commit('setProjects', projects);
-      });
-    
-  },
   listenToFirestore (context, projectId) {
-    console.log('listenToFirestore', projectId);
     // Listen for changes
-    
-    // let projectId = 'rsLQGIzVT80h4Z1VNA70';
+    console.log('listenToFirestore', projectId);
+
+    // TODO get projects list and select first project
     if (!projectId) {
-      // projectId = 'EPptkQiqlVkKQRmn74HQ';
-      projectId = 'rsLQGIzVT80h4Z1VNA70';
+      projectId = 'EPptkQiqlVkKQRmn74HQ';
+      // projectId = 'rsLQGIzVT80h4Z1VNA70';
     }
     
-    // Set active project
-    db.collection('projects')
-      .doc(projectId)
-      .onSnapshot(projectSnapshot => {
-        let project = projectSnapshot.data();
-        project.id = projectSnapshot.id;
-    //
-    //     let stages = project.stages;
-    //     project.stages = [];
-    //     stages.forEach(stageRef => {
-    //
-    //       db.doc('/projects/' + projectId + '/' + stageRef.path)
-    //         .get()
-    //         .then(r => {
-    //           let stage = r.data();
-    //           stage.id = r.id;
-    //           project.stages.push(stage);
-    //         })
-    //
-    //       // TODO Why doesnt this work?
-    //       // project.stages[0]
-    //       //   .get()
-    //       //   .then(stageSnapshot => {
-    //       //     console.log(stageSnapshot.data());
-    //       //   });
-    //
-    //     });
-        this.commit('setProject', project);
-      });
-  
-    // Set list of project names
+    // Listen for Projects
     db.collection('projects')
       .where('owner_id', '==', context.state.user.uid)
       .onSnapshot(querySnapshot => {
-        let projects = [];
-        querySnapshot.forEach(project => {
-          projects.push({
-            id: project.id,
-            name: project.get('name')
-          });
+        console.log('New projects collection snapshot');
+        let projects = {};
+        querySnapshot.forEach(projectSnapshot => {
+          let project = projectSnapshot.data();
+          project.id = projectSnapshot.id;
+          projects[projectSnapshot.id] = project;
         });
         context.commit('setProjects', projects);
       });
+    
+    // Listen for Topics
+    db.collection('projects')
+      .doc(projectId)
+      .collection('topics')
+      .onSnapshot(topicsSnapshot => {
+        console.log('New topics collection snapshot');
+        let topics = context.state.topics;
+        topicsSnapshot.forEach(topicSnapshot => {
+          let topic = topicSnapshot.data();
+          topic.id = topicSnapshot.id;
+          topic.ref = { path: topicSnapshot.ref.path };
+          topics[topicSnapshot.id] = topic;
+        });
+        context.commit('setTopics', topics);
+      });
+    
+    // Listen for Stages
+    db.collection('projects')
+      .doc(projectId)
+      .collection('stages')
+      .onSnapshot(stagesSnapshot => {
+        console.log('New stages collection snapshot');
+        let stages = {};
+        stagesSnapshot.forEach(stageSnapshot => {
+          let data = stageSnapshot.data();
+          // HACK do we need to unpack data() like this?
+          stages[stageSnapshot.id] = {
+            id: stageSnapshot.id,
+            name: data.name,
+            topics: data.topics
+                      .map(topicRef => ( {id: topicRef.id, path: topicRef.path, ref: topicRef} ))
+          };
+        });
+        context.commit('setStages', stages);
+      });
+
+    context.commit('setActiveProjectId', projectId);
   }
 };
 
@@ -253,40 +283,34 @@ const mutations = {
   setAuthenticatedUser (state, user) {
     state.user = user;
   },
-  setProject (state, project) {
-    state.project = project;
+  setActiveProjectId (state, projectId) {
+    console.log('setActiveProjectId', projectId);
+    state.activeProjectId = projectId;
   },
   setProjects (state, projects) {
+    console.log('setprojects', projects);
     state.projects = projects;
   },
-  addTopicToStage (context, { topic, stage_name }) {
-    // Update, don't create new, if topic.id exists
-    if (!topic.id) {
-      topic.id = uuid();
-      // Even though we loop over all stages, a topic can only be in 1 stage
-      context.project.stages.forEach((stage) => {
-        if (stage.name === stage_name) {
-          stage.topics.unshift(topic);
-        }
-      })
-    } else {
-      // TODO do nothing?
-    }
-  },
   setStages (state, stages) {
-    console.log('setStages', JSON.stringify(stages));
-    state.project.stages = stages;
+    console.log('setStages was', state.stages);
+    console.log('setStages will be', stages);
+    state.stages = stages;
   },
-  setTopicsInStage (state, {topics, stage_index}) {
-    console.log('setTopicsInStage', state.project.stages[stage_index].topics);
-    state.project.stages[stage_index].topics = topics;
+  setTopicsInStage (state, {topics, stage}) {
+    console.log('setTopicsInStage', topics, stage);
+    state.stages[stage.id].topics = topics;
+  },
+  setTopics (state, topics) {
+    state.topics = topics;
   },
   //
   // Topic popups
   //
   showAddTopicPopup (state, stage) {
+    console.log('showAddTopicPopup', stage.id);
     state.add_topic_popup.topic = clone(TOPIC);
     if (stage) {
+      state.add_topic_popup.stage = stage;
       state.add_topic_popup.stage_name = stage.name;
     }
     state.add_topic_popup.visible = true;
@@ -307,5 +331,6 @@ const mutations = {
 export default new Vuex.Store({
   state,
   actions,
-  mutations
+  mutations,
+  getters
 })
