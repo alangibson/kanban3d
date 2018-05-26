@@ -36,30 +36,8 @@
     </v-layout>
 
     <!-- Stage popup -->
-    <v-dialog v-model="$store.state.show_stage_popup.visible"
-              max-width="50vw">
-      <v-card>
-        <v-card-title>
-          <span class="headline">{{ $store.state.show_stage_popup.stage.name }}</span>
-        </v-card-title>
-        <v-card-text>
-          <v-list>
-            <v-list-tile v-for="(topic, index) in $store.state.show_stage_popup.stage.topics"
-                         :key="index">
-              <v-list-tile-content>
-                <v-list-tile-title v-html="topic.name"></v-list-tile-title>
-                <v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>
-              </v-list-tile-content>
-              <v-list-tile-action>
-                <v-btn @click="$store.dispatch('deleteTopicFromStageByIndex', {stage: $store.state.show_stage_popup.stage, topic_index: index})">
-                  <v-icon>delete</v-icon>
-                </v-btn>
-              </v-list-tile-action>
-            </v-list-tile>
-          </v-list>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <stage-popup v-model="$store.state.show_stage_popup">
+    </stage-popup>
 
     <!-- Add Topic Popup -->
     <topic-popup v-model="$store.state.add_topic_popup">
@@ -78,6 +56,7 @@ import firebase from '@firebase/app';
 import '@firebase/database';
 import draggable from 'vuedraggable';
 import TopicPopup from '@/components/TopicPopup.vue';
+import StagePopup from '@/components/StagePopup.vue';
 import Stage from '@/components/Stage.vue';
 import { clone, TOPIC, STAGE } from '@/common';
 
@@ -85,6 +64,7 @@ export default {
   components: {
     draggable,
     TopicPopup,
+    StagePopup,
     Stage
   },
   data() {

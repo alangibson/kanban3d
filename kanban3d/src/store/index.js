@@ -70,7 +70,16 @@ const getters = {
     let project = {};
     _.assign(project, state.projects[state.activeProjectId]);
     project.stages = state.projects[state.activeProjectId].stages
-      .map(stageRef => state.stages[stageRef.id]);
+      .map(stageRef => {
+        let stage = {};
+        if (! state.stages[stageRef.id]) {
+          return;
+        }
+        _.assign(stage, state.stages[stageRef.id]);
+        stage.topics = state.stages[stageRef.id].topics
+          .map(topicRef => state.topics[topicRef.id]);
+        return stage;
+      });
     return project;
   }
 };
@@ -130,27 +139,39 @@ const actions = {
     //   createdAt: new Date()
     // });
   },
-  // deleteTopicFromStageByIndex (context, { stage, topic_index }) {
-  //   stage.topics.splice(topic_index, 1);
-  //   context.dispatch('saveToFirestore');
-  // },
   deleteTopicFromStageByIndex (context, { stage, topic_index }) {
     let topicId = stage.topics[topic_index].id;
-    // Delete Topic from topics collection
+    // Delete entry from stage.topics
     db.collection('projects')
-      .doc(context.state.project.id)
-      .collection('topics')
-      .doc(topicId)
-      .delete()
-      .then(() => {
-        console.log('topic deleted', topicId);
-      })
-      .catch((error) => {
-        console.error('Failed to delete topic', topicId);;
+      .doc(context.getters.project.id)
+      .collection('stages')
+      .doc(stage.id)
+      .get()
+      .then(stageSnapshot => {
+        // Remove the topic from stage's array
+        let newStage = stageSnapshot.data();
+        newStage.topics.splice(topic_index, 1);
+        // Save newly changed stage
+        db.collection('projects')
+          .doc(context.getters.project.id)
+          .collection('stages')
+          .doc(stage.id)
+          .update(newStage)
+          .then(() => {
+            // Delete Topic from topics collection
+            db.collection('projects')
+              .doc(context.getters.project.id)
+              .collection('topics')
+              .doc(topicId)
+              .delete()
+              .then(() => {
+                console.log('topic deleted', topicId);
+              })
+              .catch((error) => {
+                console.error('Failed to delete topic', topicId, error);;
+              });
+          });
       });
-    
-    // TODO delete entry from stage.topics
-    
   },
   setTopicsInStage (context, {topics, stage}) {
     console.log('setTopicsInStage', stage.id, context.getters.project.id, topics, context.state.topics[topics[0].id]);

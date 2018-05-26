@@ -64,7 +64,7 @@ export default {
       //     .map(topicRef => this.$store.state.topics[topicRef.id]);
       // },
       get () {
-        if (! this.stage) {
+        if (! this.stage || ! this.stage.topics || this.stage.topics.length < 1) {
           return;
         }
         console.log('rerender topics', this.stage.id);
