@@ -89,25 +89,13 @@
 </template>
 
 <script>
-import Vue from 'vue'
-import { clone, TOPIC, STAGE } from '@/common'
+import Vue from 'vue';
+import { clone, TOPIC, STAGE } from '@/common';
 
-// import VueQuillEditor from 'vue-quill-editor'
 // Note: VueQuillEditor is globally imported in index.html
-// https://cdn.jsdelivr.net/npm/quill-auto-links@0.1.2/dist/index.min.js
-// https://cdn.jsdelivr.net/npm/quill-magic-url@0.1.0/dist/index.min.js
-// import MagicUrl from 'quill-magic-url'
-// import AutoLinks from 'quill-auto-links'
-// Quill.register('modules/magicUrl', MagicUrl)
-// Quill.register('modules/auto-links', AutoLinks)
-Vue.use(VueQuillEditor,
-  {
-    modules: {
-      // magicUrl: true,
-      // 'auto-links': true
-    }
-  }
-)
+import MagicUrl from 'quill-magic-url';
+Quill.register('modules/magicUrl', MagicUrl);
+Vue.use(VueQuillEditor);
 
 export default {
   props: [
@@ -127,7 +115,8 @@ export default {
           [{ 'align': [] }],
           ['link', 'image'],
           ['clean']
-        ]
+        ],
+        magicUrl: true
       }
     },
     selected_stage_id: null
