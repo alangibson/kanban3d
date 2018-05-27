@@ -19,10 +19,10 @@ firebase.initializeApp({
   projectId: "ichi-ban",
   storageBucket: "ichi-ban.appspot.com",
   messagingSenderId: "951945396453"
-})
+});
 
 // Initialize Cloud Firestore through Firebase
-var db = firebase.firestore()
+var db = firebase.firestore();
 
 /*
  * Vue Configuration
@@ -70,7 +70,6 @@ const getters = {
     if (! state.projects[state.activeProjectId]) {
       return;
     }
-    console.log('getters project', state.projects[state.activeProjectId]);
     let project = {};
     _.assign(project, state.projects[state.activeProjectId]);
     project.stages = state.projects[state.activeProjectId].stages
@@ -94,8 +93,6 @@ const actions = {
     context.dispatch('listenToFirestore');
   },
   saveTopicToStageById (context, { topic, stage_id }) {
-    console.log('addTopicToStageById', topic, topic.id, stage_id);
-    
     // Updating existing topic or create new topic
     if (context.state.topics[topic.id]) {
       // Topic already exists. Just need to update
@@ -169,7 +166,6 @@ const actions = {
               .doc(topicId)
               .delete()
               .then(() => {
-                console.log('topic deleted', topicId);
               })
               .catch((error) => {
                 console.error('Failed to delete topic', topicId, error);;
@@ -179,8 +175,7 @@ const actions = {
   },
   setTopicsInStage (context, {topics, stage}) {
     // Note: topics can be empty array
-    console.log('setTopicsInStage', stage.id, context.getters.project.id, topics);
-    
+
     // Update local state
     context.commit('setTopicsInStage', {topics, stage});
     
@@ -206,7 +201,7 @@ const actions = {
   },
   selectProjectById (context, project_id) {
     context.commit('setActiveProjectId', project_id);
-    context.dispatch('listenToFirestore', project_id);
+    context.dispatch('listenToFirestore');
   },
   newProject (context, project) {
     let user = firebase.auth().currentUser;
@@ -216,13 +211,12 @@ const actions = {
     }
     project.owner_id = user.uid;
     let origStages = clone(project.stages);
-    console.log('origStages', origStages);
     project.stages = [];
-  
+    // Save new project to Firestore
     db.collection('projects')
       .add(project)
       .then(projectRef => {
-  
+        // Start saving all new stages
         let stagePromises = [];
         origStages.forEach(origStage => {
           stagePromises.push(
@@ -237,7 +231,6 @@ const actions = {
                 let p = projectSnapshot.data();
                 p.stages = stageRefs;
                 projectRef.update(p);
-                
                 // Were done, so set this project to active
                 context.dispatch('selectProjectById', projectRef.id);
               });
@@ -258,32 +251,16 @@ const actions = {
         createdAt
       });
   },
-  listenToFirestore (context, projectId) {
+  listenToFirestore (context) {
     // Listen for changes
-    console.log('listenToFirestore', projectId);
-    
-    // Set active project to default if one is not specified
-    if (! projectId) {
-      // Get projects list and select first project
-      // db.collection('projects')
-      //   .where('owner_id', '==', context.state.user.uid)
-      //   .get()
-      //   .then(querySnapshot => {
-      //     if (! querySnapshot.docs) {
-      //       return;
-      //     }
-      //     console.log('querySnapshot', querySnapshot.docs);
-      //     context.commit('setActiveProjectId', querySnapshot.docs[0].id);
-      //   });
-  
-      projectId = 'Y0cSkNhpko7fKFvnI8mh';
-    }
     
     // Listen for Projects
+    // Start listening for stages and topics once we have loaded projects
     db.collection('projects')
       .where('owner_id', '==', context.state.user.uid)
       .onSnapshot(querySnapshot => {
-        console.log('New projects collection snapshot');
+        
+        // Load up all projects
         let projects = {};
         querySnapshot.forEach(projectSnapshot => {
           let project = projectSnapshot.data();
@@ -291,45 +268,47 @@ const actions = {
           projects[projectSnapshot.id] = project;
         });
         context.commit('setProjects', projects);
+  
+        // Set default project if needed
+        // Do this here because the is the earliest point where we know which projects are available.
+        if (! context.state.activeProjectId) {
+          context.commit('setActiveProjectId', querySnapshot.docs[0].id);
+        }
+  
+        // Listen for Topics
+        db.collection('projects')
+          .doc(context.state.activeProjectId)
+          .collection('topics')
+          .onSnapshot(topicsSnapshot => {
+            let topics = context.state.topics;
+            topicsSnapshot.forEach(topicSnapshot => {
+              let topic = topicSnapshot.data();
+              topic.id = topicSnapshot.id;
+              topic.ref = { path: topicSnapshot.ref.path };
+              topics[topicSnapshot.id] = topic;
+            });
+            context.commit('setTopics', topics);
+          });
+  
+        // Listen for Stages
+        db.collection('projects')
+          .doc(context.state.activeProjectId)
+          .collection('stages')
+          .onSnapshot(stagesSnapshot => {
+            let stages = {};
+            stagesSnapshot.forEach(stageSnapshot => {
+              let data = stageSnapshot.data();
+              // HACK do we need to unpack data() like this?
+              stages[stageSnapshot.id] = {
+                id: stageSnapshot.id,
+                name: data.name,
+                topics: data.topics
+                  .map(topicRef => ( {id: topicRef.id, path: topicRef.path, ref: topicRef} ))
+              };
+            });
+            context.commit('setStages', stages);
+          });
       });
-    
-    // Listen for Topics
-    db.collection('projects')
-      .doc(projectId)
-      .collection('topics')
-      .onSnapshot(topicsSnapshot => {
-        console.log('New topics collection snapshot');
-        let topics = context.state.topics;
-        topicsSnapshot.forEach(topicSnapshot => {
-          let topic = topicSnapshot.data();
-          topic.id = topicSnapshot.id;
-          topic.ref = { path: topicSnapshot.ref.path };
-          topics[topicSnapshot.id] = topic;
-        });
-        context.commit('setTopics', topics);
-      });
-    
-    // Listen for Stages
-    db.collection('projects')
-      .doc(projectId)
-      .collection('stages')
-      .onSnapshot(stagesSnapshot => {
-        console.log('New stages collection snapshot');
-        let stages = {};
-        stagesSnapshot.forEach(stageSnapshot => {
-          let data = stageSnapshot.data();
-          // HACK do we need to unpack data() like this?
-          stages[stageSnapshot.id] = {
-            id: stageSnapshot.id,
-            name: data.name,
-            topics: data.topics
-                      .map(topicRef => ( {id: topicRef.id, path: topicRef.path, ref: topicRef} ))
-          };
-        });
-        context.commit('setStages', stages);
-      });
-
-    context.commit('setActiveProjectId', projectId);
   }
 };
 
@@ -338,20 +317,15 @@ const mutations = {
     state.user = user;
   },
   setActiveProjectId (state, projectId) {
-    console.log('setActiveProjectId', projectId);
     state.activeProjectId = projectId;
   },
   setProjects (state, projects) {
-    console.log('setprojects', projects);
     state.projects = projects;
   },
   setStages (state, stages) {
-    console.log('setStages was', state.stages);
-    console.log('setStages will be', stages);
     state.stages = stages;
   },
   setTopicsInStage (state, {topics, stage}) {
-    console.log('setTopicsInStage', topics, stage);
     state.stages[stage.id].topics = topics;
   },
   setTopics (state, topics) {
@@ -367,7 +341,6 @@ const mutations = {
   // Topic popups
   //
   showAddTopicPopup (state, stage) {
-    console.log('showAddTopicPopup', stage.id);
     state.add_topic_popup.topic = clone(TOPIC);
     if (stage) {
       state.add_topic_popup.stage = stage;
