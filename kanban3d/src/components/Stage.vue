@@ -18,7 +18,7 @@
                 :data-topic-id="topic.id"
                 class="elevation-2 mb-1">
           <v-card-title @click="showEditTopicPopup(topic)">
-            {{ topic.name }}
+            {{ topicName(topic) }}
           </v-card-title>
         </v-card>
       </draggable>
@@ -41,10 +41,6 @@ export default {
     // 'stageId'
   ],
   computed: {
-    // stage () {
-    //   console.log('rerender stage', this.stageId);
-    //   return this.$store.state.stages[this.stageId];
-    // },
     stageId () {
       if (! this.stage) {
         return;
@@ -58,20 +54,17 @@ export default {
       return this.stage.name;
     },
     topics: {
-      // get () {
-      //   console.log('rerender topics', this.stageId);
-      //   return this.$store.state.stages[this.stageId].topics
-      //     .map(topicRef => this.$store.state.topics[topicRef.id]);
-      // },
       get () {
-        if (! this.stage || ! this.stage.topics || this.stage.topics.length < 1) {
+        // Note: Stage must always have a child topics array, or we will loose messages on drag target
+        if (! this.stage) {
           return;
         }
-        console.log('rerender topics', this.stage.id);
+        console.log('rerender topics', this.stage.name, this.stage.id);
         return this.$store.state.stages[this.stage.id].topics
           .map(topicRef => this.$store.state.topics[topicRef.id]);
       },
       set (value) {
+        console.log('topics set', this.stage.name, value);
         this.$store.dispatch('setTopicsInStage', {
           topics: value,
           stage: this.stage
@@ -97,6 +90,11 @@ export default {
         toStageIndex: event.to.dataset.stageIndex,
         createdAt: new Date()
       });
+    },
+    topicName (topic) {
+      if (topic) {
+        return topic.name;
+      }
     },
     handleChange (event) {
       if (event.added) {

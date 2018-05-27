@@ -178,10 +178,8 @@ const actions = {
       });
   },
   setTopicsInStage (context, {topics, stage}) {
-    console.log('setTopicsInStage', stage.id, context.getters.project.id, topics, context.state.topics[topics[0].id]);
-
-    // TODO add event
-    // context.dispatch('addEvent', {event_type: 'TOPIC_MOVED', topic: })
+    // Note: topics can be empty array
+    console.log('setTopicsInStage', stage.id, context.getters.project.id, topics);
     
     // Update local state
     context.commit('setTopicsInStage', {topics, stage});
@@ -202,6 +200,9 @@ const actions = {
           .doc(stage.id)
           .update(newStage);
       });
+
+    // TODO add event
+    // context.dispatch('addEvent', {event_type: 'TOPIC_MOVED', topic: })
   },
   selectProjectById (context, project_id) {
     context.commit('setActiveProjectId', project_id);
@@ -243,31 +244,6 @@ const actions = {
           });
         
       });
-    
-    // Save new project and make it our active project
-    // db.collection('projects')
-    //   .add(project)
-    //   .then(projectRef => {
-    //
-    //     // Add origStages stages to collection and get ref ids
-    //     origStages.forEach(origStage => {
-    //       console.log('origStage', origStage);
-    //       projectRef.collection('stages')
-    //         .add(origStage)
-    //         .then(stageRef => {
-    //           // Add stage reference to project.stages array
-    //           // stageRefs.push(stageRef.id);
-    //           projectRef
-    //             .get()
-    //             .then(p => {
-    //               p.stages.push(stageRef);
-    //               projectRef.update(p);
-    //             });
-    //         });
-    //     });
-    //
-    //     context.dispatch('selectProjectById', projectRef.id);
-    //   });
   },
   addEvent (context, { type, topicId, fromStageIndex, toStageIndex, createdAt }) {
     // TODO save stage names
@@ -285,11 +261,22 @@ const actions = {
   listenToFirestore (context, projectId) {
     // Listen for changes
     console.log('listenToFirestore', projectId);
-
-    // TODO get projects list and select first project
-    if (!projectId) {
-      projectId = 'EPptkQiqlVkKQRmn74HQ';
-      // projectId = 'rsLQGIzVT80h4Z1VNA70';
+    
+    // Set active project to default if one is not specified
+    if (! projectId) {
+      // Get projects list and select first project
+      // db.collection('projects')
+      //   .where('owner_id', '==', context.state.user.uid)
+      //   .get()
+      //   .then(querySnapshot => {
+      //     if (! querySnapshot.docs) {
+      //       return;
+      //     }
+      //     console.log('querySnapshot', querySnapshot.docs);
+      //     context.commit('setActiveProjectId', querySnapshot.docs[0].id);
+      //   });
+  
+      projectId = 'Y0cSkNhpko7fKFvnI8mh';
     }
     
     // Listen for Projects

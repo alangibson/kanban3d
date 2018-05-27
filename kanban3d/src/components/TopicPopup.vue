@@ -17,7 +17,8 @@
                     label="What"
                     autofocus
                     :rules="[requiredRule]"
-                    required />
+                    required
+                    tabindex="1"/>
 
                 <quill-editor v-model="value.topic.description"
                               ref="quillEditor"
@@ -28,17 +29,20 @@
                   <v-flex md4>
                     <v-text-field
                         v-model="value.topic.who"
-                        label="Who" />
+                        label="Who"
+                        tabindex="3"/>
                   </v-flex>
                   <v-flex md4>
                     <v-text-field
                         v-model="value.topic.when"
-                        label="When" />
+                        label="When"
+                        tabindex="4"/>
                   </v-flex>
                   <v-flex md4>
                     <v-text-field
                       v-model="value.topic.where"
-                      label="Where" />
+                      label="Where"
+                      tabindex="5"/>
                   </v-flex>
                 </v-layout>
               </v-flex>
@@ -48,10 +52,11 @@
                     label="Stage"
                     required
                     :rules="[requiredRule]"
-                    v-model="value.stage_name"
+                    v-model="selectedStage"
                     :items="stages"
                     item-text="name"
-                    item-value="name" />
+                    item-value="id"
+                    tabindex="6"/>
               </v-flex>
             </v-layout>
           </v-form>
@@ -62,17 +67,20 @@
         <v-spacer></v-spacer>
         <v-btn color="blue darken-1"
                flat
-               @click.native="cancelTopicPopup">
+               @click.native="cancelTopicPopup"
+               tabindex="7">
           Close
         </v-btn>
         <v-btn color="blue darken-1"
                flat
-               @click.native="saveAndCloseTopicPopup">
+               @click.native="saveAndCloseTopicPopup"
+               tabindex="8">
           Save and Close
         </v-btn>
         <v-btn color="blue darken-1"
                flat
-               @click.native="saveTopicPopup">
+               @click.native="saveTopicPopup"
+               tabindex="9">
           Save
         </v-btn>
       </v-card-actions>
@@ -121,11 +129,23 @@ export default {
           ['clean']
         ]
       }
-    }
+    },
+    selected_stage_id: null
   }),
   computed: {
     stages () {
       return this.$store.getters.project.stages;
+    },
+    selectedStage: {
+      get () {
+        if (! this.selected_stage_id) {
+          this.selected_stage_id = this.$store.getters.project.stages[0].id;
+        }
+        return this.selected_stage_id;
+      },
+      set (value) {
+        this.selected_stage_id = value;
+      }
     }
   },
   methods: {
@@ -147,7 +167,7 @@ export default {
       console.log('this.value.stage', this.value.stage.id);
       this.$store.dispatch('saveTopicToStageById', {
         topic: this.value.topic,
-        stage_id: this.value.stage.id
+        stage_id: this.selected_stage_id
       });
       this.resetTopicPopup();
     },
@@ -159,6 +179,9 @@ export default {
       this.value.visible = false;
       this.resetTopicPopup();
     }
+  },
+  mounted () {
+    document.getElementsByClassName("ql-editor")[0].tabIndex = 2;
   }
 }
 </script>

@@ -107,9 +107,7 @@ export default {
     },
     selectedProject: {
       get () {
-        let x = this.$store.getters.project;
-        console.log('selectedProject get', x);
-        return x;
+        return this.$store.getters.project;
       },
       set (project_id) {
         this.$store.dispatch('selectProjectById', project_id);
