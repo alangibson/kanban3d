@@ -17,6 +17,47 @@ export const STAGE = {
   topics: []
 }
 
+export const PROJECT = {
+  name: null,
+  owner_id: null,
+  version: 1,
+  stages: [
+    {
+      name: "Soon",
+      topics: []
+    },
+    {
+      name: "In Progress",
+      topics: []
+    }
+    ,
+    {
+      name: "Paused",
+      topics: []
+    },
+    {
+      name: "Done",
+      topics: []
+    },
+    {
+      name: "Someday",
+      topics: []
+    },
+    {
+      name: "Handed Off",
+      topics: []
+    },
+    {
+      name: "Blocked",
+      topics: []
+    },
+    {
+      name: "Canceled",
+      topics: []
+    }
+  ]
+};
+
 //
 // Functions
 //

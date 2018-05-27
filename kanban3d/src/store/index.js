@@ -4,7 +4,7 @@ import Vuex from 'vuex'
 import firebase from '@firebase/app'
 import '@firebase/firestore'
 import uuid from 'uuid/v4'
-import { clone, STAGE, TOPIC } from '@/common';
+import { clone, STAGE, TOPIC, PROJECT } from '@/common';
 
 // firebase.firestore.setLogLevel('debug');
 
@@ -52,6 +52,10 @@ const state = {
   show_stage_popup: {
     visible: false,
     stage: clone(STAGE)
+  },
+  project_popup: {
+    visible: false,
+    project: clone(PROJECT)
   },
   user: null,
   activeProjectId: null,
@@ -203,25 +207,67 @@ const actions = {
     context.commit('setActiveProjectId', project_id);
     context.dispatch('listenToFirestore', project_id);
   },
-  newProject (context, { project_name }) {
+  newProject (context, project) {
     let user = firebase.auth().currentUser;
     if (!user) {
       console.error('Cant create new project. Not logged in!');
       return;
     }
-    let project = {
-      name: project_name,
-      owner_id: user.uid,
-      version: 1,
-      stages: [
-      ]
-    };
-    // Save new project and make it our active project
+    project.owner_id = user.uid;
+    let origStages = clone(project.stages);
+    console.log('origStages', origStages);
+    project.stages = [];
+  
     db.collection('projects')
       .add(project)
       .then(projectRef => {
-        context.dispatch('selectProjectById', projectRef.id);
+  
+        let stagePromises = [];
+        origStages.forEach(origStage => {
+          stagePromises.push(
+            projectRef.collection('stages').add(origStage));
+        });
+        // Wait for all stages to be saved, then add them to project.stages array
+        Promise.all(stagePromises)
+          .then(stageRefs => {
+            projectRef
+              .get()
+              .then(projectSnapshot => {
+                let p = projectSnapshot.data();
+                p.stages = stageRefs;
+                projectRef.update(p);
+                
+                // Were done, so set this project to active
+                context.dispatch('selectProjectById', projectRef.id);
+              });
+          });
+        
       });
+    
+    // Save new project and make it our active project
+    // db.collection('projects')
+    //   .add(project)
+    //   .then(projectRef => {
+    //
+    //     // Add origStages stages to collection and get ref ids
+    //     origStages.forEach(origStage => {
+    //       console.log('origStage', origStage);
+    //       projectRef.collection('stages')
+    //         .add(origStage)
+    //         .then(stageRef => {
+    //           // Add stage reference to project.stages array
+    //           // stageRefs.push(stageRef.id);
+    //           projectRef
+    //             .get()
+    //             .then(p => {
+    //               p.stages.push(stageRef);
+    //               projectRef.update(p);
+    //             });
+    //         });
+    //     });
+    //
+    //     context.dispatch('selectProjectById', projectRef.id);
+    //   });
   },
   addEvent (context, { type, topicId, fromStageIndex, toStageIndex, createdAt }) {
     // TODO save stage names
@@ -323,6 +369,12 @@ const mutations = {
   },
   setTopics (state, topics) {
     state.topics = topics;
+  },
+  //
+  // Project popup
+  //
+  showNewProjectPopup (state) {
+    state.project_popup.visible = true;
   },
   //
   // Topic popups

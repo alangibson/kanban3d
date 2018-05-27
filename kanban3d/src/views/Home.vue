@@ -35,6 +35,10 @@
       </v-flex>
     </v-layout>
 
+    <!-- Project popup -->
+    <project-popup v-model="$store.state.project_popup">
+    </project-popup>
+
     <!-- Stage popup -->
     <stage-popup v-model="$store.state.show_stage_popup">
     </stage-popup>
@@ -56,6 +60,7 @@ import firebase from '@firebase/app';
 import '@firebase/database';
 import draggable from 'vuedraggable';
 import TopicPopup from '@/components/TopicPopup.vue';
+import ProjectPopup from '@/components/ProjectPopup.vue';
 import StagePopup from '@/components/StagePopup.vue';
 import Stage from '@/components/Stage.vue';
 import { clone, TOPIC, STAGE } from '@/common';
@@ -63,6 +68,7 @@ import { clone, TOPIC, STAGE } from '@/common';
 export default {
   components: {
     draggable,
+    ProjectPopup,
     TopicPopup,
     StagePopup,
     Stage

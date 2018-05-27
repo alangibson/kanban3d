@@ -174,7 +174,7 @@ export default {
     },
 
     showNewProjectPopup () {
-      // TODO
+      this.$store.commit('showNewProjectPopup');
     },
 
     newProject (project_name) {

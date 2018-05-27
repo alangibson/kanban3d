@@ -145,7 +145,6 @@ export default {
       }
       // Save new topic
       console.log('this.value.stage', this.value.stage.id);
-      // let newTopic = clone(this.value.topic);
       this.$store.dispatch('saveTopicToStageById', {
         topic: this.value.topic,
         stage_id: this.value.stage.id
