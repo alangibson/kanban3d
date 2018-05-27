@@ -1,7 +1,8 @@
 service cloud.firestore {
   match /databases/{database}/documents {
     match /projects/{project} {
-      allow read, write: if resource.data.owner_id == request.auth.uid;
+      allow read, update, delete: if resource.data.owner_id == request.auth.uid;
+      allow create: if request.auth.uid != null;
 
       function projectDoc() {
         return get(/databases/$(database)/documents/projects/$(project)).data;
