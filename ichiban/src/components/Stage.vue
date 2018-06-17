@@ -13,14 +13,12 @@
                  :data-stage-index="index"
                  :data-stage-id="stageId"
                  class="draggable">
-        <v-card v-for="(topic, index) in topics"
-                :key="index"
-                :data-topic-id="topic.id"
-                class="elevation-2 mb-1">
-          <v-card-title @click="showEditTopicPopup(topic)">
-            {{ topicName(topic) }}
-          </v-card-title>
-        </v-card>
+
+        <topic v-for="(topic, index) in topics"
+               :key="index"
+               :topic="topic">
+        </topic>
+
       </draggable>
     </v-card-text>
   </v-card>
@@ -29,16 +27,17 @@
 <script>
 import draggable from 'vuedraggable';
 import { clone, TOPIC } from '@/common';
+import Topic from '@/components/Topic'
 
 export default {
   name: 'stage',
   components: {
-    draggable
+    draggable,
+    Topic
   },
   props: [
     'index',
-    'stage',
-    // 'stageId'
+    'stage'
   ],
   computed: {
     stageId () {
@@ -73,9 +72,6 @@ export default {
     }
   },
   methods: {
-    showEditTopicPopup (topic) {
-      this.$store.commit('showEditTopicPopup', topic);
-    },
     showStagePopup (stage) {
       if (! stage) {
         return;
@@ -90,11 +86,6 @@ export default {
         toStageIndex: event.to.dataset.stageIndex,
         createdAt: new Date()
       });
-    },
-    topicName (topic) {
-      if (topic) {
-        return topic.name;
-      }
     },
     handleChange (event) {
       if (event.added) {

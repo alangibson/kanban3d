@@ -33,11 +33,48 @@
                         tabindex="3"/>
                   </v-flex>
                   <v-flex md4>
-                    <v-text-field
-                        v-model="value.topic.when"
-                        label="When"
-                        tabindex="4"/>
+                    <v-menu
+                        ref="dateTimePickerMenu"
+                        :close-on-content-click="false"
+                        v-model="dateTimePickerMenu"
+                        :nudge-right="40"
+                        :nudge-up="60"
+                        :return-value.sync="date"
+                        lazy
+                        transition="scale-transition"
+                        offset-y
+                        full-width
+                        min-width="290px">
+                      <v-text-field
+                          slot="activator"
+                          v-model="value.topic.when"
+                          @click="showDateTimePicker"
+                          label="When"
+                          tabindex="4"
+                          prepend-icon="event">
+                      </v-text-field>
+                      <!-- Combined date and time picker menu -->
+                      <div>
+                        <v-layout row>
+                          <v-flex>
+                            <v-date-picker v-model="date" scrollable></v-date-picker>
+                          </v-flex>
+                          <v-flex>
+                            <v-time-picker v-model="time" format="24hr"></v-time-picker>
+                          </v-flex>
+                        </v-layout>
+                        <!--TODO scoped OK and cancel buttons -->
+                        <!--<v-layout row>-->
+                          <!--<v-flex>-->
+                            <!--<v-btn flat color="primary" @click="dateTimePickerMenu = false">Cancel</v-btn>-->
+                            <!--<v-btn flat color="primary" @click="$refs.dateTimePickerMenu.save(date)">OK</v-btn>-->
+                          <!--</v-flex>-->
+                        <!--</v-layout>-->
+                      </div>
+
+                    </v-menu>
                   </v-flex>
+
                   <v-flex md4>
                     <v-text-field
                       v-model="value.topic.where"
@@ -52,7 +89,7 @@
                     label="Stage"
                     required
                     :rules="[requiredRule]"
-                    v-model="selectedStage"
+                    v-model="selectedStageId"
                     :items="stages"
                     item-text="name"
                     item-value="id"
@@ -92,16 +129,25 @@
 import Vue from 'vue';
 import { clone, TOPIC, STAGE } from '@/common';
 
+import DateTimePicker from '@/components/DateTimePicker';
+
 // Note: VueQuillEditor is globally imported in index.html
 import MagicUrl from 'quill-magic-url';
+// import DateTimePicker from "./DateTimePicker";
 Quill.register('modules/magicUrl', MagicUrl);
 Vue.use(VueQuillEditor);
 
 export default {
+  components: {
+    DateTimePicker
+  },
   props: [
     'value'
   ],
   data: () => ({
+    dateTimePickerMenu: false,
+    pickerDate: null,
+    pickerTime: null,
     editor_config: {
       theme: 'snow',
       placeholder: "How and Why",
@@ -122,10 +168,36 @@ export default {
     selected_stage_id: null
   }),
   computed: {
+    dateTime () {
+      let tzOffset = (-(new Date().getTimezoneOffset()/60) + ':00').padStart(5, '0');
+      return '' + this.date + 'T' + this.time + '+' + tzOffset;
+    },
+    date: {
+      get () {
+        return this.pickerDate;
+      },
+      set (value) {
+        this.pickerDate = value;
+        // Warning: side effect
+        let tzOffset = (-(new Date().getTimezoneOffset()/60) + ':00').padStart(5, '0');
+        this.value.topic.when = '' + value + 'T' + this.time + '+' + tzOffset;
+      }
+    },
+    time: {
+      get () {
+        return this.pickerTime;
+      },
+      set (value) {
+        this.pickerTime = value;
+        // Warning: side effect
+        let tzOffset = (-(new Date().getTimezoneOffset()/60) + ':00').padStart(5, '0');
+        this.value.topic.when = '' + this.pickerDate + 'T' + value + '+' + tzOffset;
+      }
+    },
     stages () {
       return this.$store.getters.project.stages;
     },
-    selectedStage: {
+    selectedStageId: {
       get () {
         if (! this.selected_stage_id) {
           this.selected_stage_id = this.$store.getters.project.stages[0].id;
@@ -153,7 +225,6 @@ export default {
         return;
       }
       // Save new topic
-      console.log('this.value.stage', this.value.stage.id);
       this.$store.dispatch('saveTopicToStageById', {
         topic: this.value.topic,
         stage_id: this.selected_stage_id
@@ -167,6 +238,10 @@ export default {
     cancelTopicPopup () {
       this.value.visible = false;
       this.resetTopicPopup();
+    },
+    showDateTimePicker () {
+      console.log('showDateTimePicker');
+      this.showDateTimePicker = true;
     }
   },
   mounted () {

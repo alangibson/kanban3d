@@ -1,9 +1,7 @@
 
 export PATH="$PWD/node_modules/.bin:$PWD/node-v9.5.0-linux-x64/bin:$PATH"
-
 npm install @vue/cli
-vue create kanban3d
-
+vue create ichiban
 npm install --save @firebase/app @firebase/auth @firebase/database
 npm install --save vuetify
 npm install --save vuedraggable
@@ -14,15 +12,21 @@ npm install --save cuid
 npm install --save froala-editor
 npm install --save vue-froala-wysiwyg
 
-cd kanban3d
+# Run in dev mode
+cd ichiban
+export PATH="$PWD/node_modules/.bin:$PWD/node-v9.5.0-linux-x64/bin:$PATH"
+npm install
 npm run serve
 
-cd ~/dev/kanban3d/kanban3d
+# Initialize Firebase
+cd ~/dev/kanban3d/ichiban
 firebase login
 firebase init
 
+# Deploy to Firebase
 export PATH="$PWD/node_modules/.bin:$PATH"
-cd ~/dev/kanban3d/kanban3d
+cd ~/dev/kanban3d/ichiban
+export PATH="$PWD/node_modules/.bin:$PATH"
 rm -fr dist
 npm run build
 firebase deploy

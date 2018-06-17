@@ -1,10 +1,12 @@
-import _ from 'lodash'
-import Vue from 'vue'
-import Vuex from 'vuex'
-import firebase from '@firebase/app'
-import '@firebase/firestore'
-import uuid from 'uuid/v4'
+import _ from 'lodash';
+import Vue from 'vue';
+import Vuex from 'vuex';
+import firebase from '@firebase/app';
+import '@firebase/firestore';
+import uuid from 'uuid/v4';
 import { clone, STAGE, TOPIC, PROJECT } from '@/common';
+import { PROJECTS, STAGES, TOPICS, EVENTS } from '@/defaults';
+import auth from '@/store/Auth';
 
 // firebase.firestore.setLogLevel('debug');
 
@@ -23,6 +25,11 @@ firebase.initializeApp({
 
 // Initialize Cloud Firestore through Firebase
 var db = firebase.firestore();
+// These functions are provided by listenToFirestore()
+// Functions are initialized to avoid needless errors
+var unsubscribeProjects = () => {};
+var unsubscribeTopics = () => {};
+var unsubscribeStages = () => {};
 
 /*
  * Vue Configuration
@@ -30,12 +37,17 @@ var db = firebase.firestore();
 
 Vue.use(Vuex)
 
+
 const state = {
+  // Show side menu?
   drawer: false,
   data_ready: false,
   show: {
     in_sight: true,
     out_of_mind: true,
+    past: true,
+    present: true,
+    future: true,
     row_state: 11
   },
   add_topic_popup: {
@@ -57,12 +69,11 @@ const state = {
     visible: false,
     project: clone(PROJECT)
   },
-  user: null,
   activeProjectId: null,
-  projects: {},
-  stages: {},
-  topics: {},
-  events: []
+  projects: clone(PROJECTS),
+  stages: clone(STAGES),
+  topics: clone(TOPICS),
+  events: clone(EVENTS)
 };
 
 const getters = {
@@ -88,21 +99,33 @@ const getters = {
 };
 
 const actions = {
-  setAuthenticatedUser (context, { user }) {
-    context.commit('setAuthenticatedUser', user);
-    context.dispatch('listenToFirestore');
+  /**
+   * Reset local state
+   */
+  reset (context) {
+    context.commit('reset');
   },
   saveTopicToStageById (context, { topic, stage_id }) {
     // Updating existing topic or create new topic
     if (context.state.topics[topic.id]) {
-      // Topic already exists. Just need to update
+      // Topic already exists in stage. Just need to update
       db.collection('projects')
         .doc(context.getters.project.id)
         .collection('topics')
         .doc(topic.id)
         .update(topic);
+  
+      // TODO create event
+      context.dispatch('addEvent', {
+        type: 'TOPIC_MOVED',
+        topicId: topic.id,
+        // fromStageIndex: null,
+        toStageIndex: event.to.dataset.stageIndex,
+        createdAt: new Date()
+      });
+      
     } else {
-      // Topic doesnt exist. Need to add.
+      // Topic doesnt exist in stage. Need to add.
       db.collection('projects')
         .doc(context.getters.project.id)
         .collection('topics')
@@ -126,19 +149,19 @@ const actions = {
                 .collection('stages')
                 .doc(stage_id)
                 .update(stage);
-          
+  
+              // TODO create event
+              context.dispatch('addEvent', {
+                type: 'TOPIC_CREATED',
+                topicId: topic.id,
+                // fromStageIndex: null,
+                toStageIndex: event.to.dataset.stageIndex,
+                createdAt: new Date()
+              });
+              
             });
         });
     }
-    
-    // TODO create event
-    // context.dispatch('addEvent', {
-    //   type: 'TOPIC_CREATED',
-    //   topicId: topic.id,
-    //   fromStageIndex: null,
-    //   toStageIndex: event.to.dataset.stageIndex,
-    //   createdAt: new Date()
-    // });
   },
   deleteTopicFromStageByIndex (context, { stage, topic_index }) {
     let topicId = stage.topics[topic_index].id;
@@ -256,8 +279,8 @@ const actions = {
     
     // Listen for Projects
     // Start listening for stages and topics once we have loaded projects
-    db.collection('projects')
-      .where('owner_id', '==', context.state.user.uid)
+    unsubscribeProjects = db.collection('projects')
+      .where('owner_id', '==', context.state.auth.user.uid)
       .onSnapshot(querySnapshot => {
         
         // Load up all projects
@@ -276,7 +299,7 @@ const actions = {
         }
   
         // Listen for Topics
-        db.collection('projects')
+        unsubscribeTopics = db.collection('projects')
           .doc(context.state.activeProjectId)
           .collection('topics')
           .onSnapshot(topicsSnapshot => {
@@ -291,7 +314,7 @@ const actions = {
           });
   
         // Listen for Stages
-        db.collection('projects')
+        unsubscribeStages = db.collection('projects')
           .doc(context.state.activeProjectId)
           .collection('stages')
           .onSnapshot(stagesSnapshot => {
@@ -309,12 +332,28 @@ const actions = {
             context.commit('setStages', stages);
           });
       });
+  },
+  unsubscribeFromFirestore (context) {
+    unsubscribeProjects();
+    unsubscribeTopics();
+    unsubscribeStages();
   }
 };
 
 const mutations = {
-  setAuthenticatedUser (state, user) {
-    state.user = user;
+  /**
+   * Reset state to initial state
+   */
+  reset (state) {
+    state.projects = clone(PROJECTS);
+    state.topics = clone(TOPICS);
+    state.stages = clone(STAGES);
+    state.events = clone(EVENTS);
+    state.activeProjectId = null;
+    state.drawer = false;
+  },
+  showDrawer (state, showDrawer) {
+    state.drawer = showDrawer;
   },
   setActiveProjectId (state, projectId) {
     state.activeProjectId = projectId;
@@ -361,9 +400,14 @@ const mutations = {
   }
 };
 
+const modules = {
+  auth
+};
+
 export default new Vuex.Store({
   state,
   actions,
   mutations,
-  getters
+  getters,
+  modules
 })

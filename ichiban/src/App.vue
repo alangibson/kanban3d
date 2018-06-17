@@ -1,0 +1,190 @@
+<template>
+  <v-app>
+
+    <v-navigation-drawer
+        app
+        fixed
+        v-model="$store.state.drawer">
+      <v-list dense>
+
+        <v-list-tile avatar>
+          <v-list-tile-avatar>
+            <img :src="avatarUrl">
+          </v-list-tile-avatar>
+          <v-list-tile-content>
+            <v-list-tile-title>{{userFullName}}</v-list-tile-title>
+          </v-list-tile-content>
+        </v-list-tile>
+
+        <v-list-tile>
+          <v-list-tile-title>Project</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile>
+          <v-list-tile-content>
+            <v-select
+                :items="projects"
+                v-model="selectedProject"
+                item-text="name"
+                item-value="id"
+                label="Select"
+                single-line>
+            </v-select>
+          </v-list-tile-content>
+        </v-list-tile>
+        <v-list-tile>
+          <v-list-tile-content>
+            <v-btn @click="showNewProjectPopup">New Project</v-btn>
+          </v-list-tile-content>
+        </v-list-tile>
+
+        <v-list-tile>
+          <v-list-tile-title>Visibility</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile>
+          <v-checkbox label="In Sight"
+                      @change="calculateRowState"
+                      v-model="$store.state.show.in_sight"/>
+        </v-list-tile>
+        <v-list-tile>
+          <v-checkbox label="Out of Mind"
+                      @change="calculateRowState"
+                      v-model="$store.state.show.out_of_mind"/>
+        </v-list-tile>
+        <v-list-tile>
+          <v-checkbox label="Past"
+                      @change="calculateRowState"
+                      v-model="$store.state.show.past"/>
+        </v-list-tile>
+        <v-list-tile>
+          <v-checkbox label="Present"
+                      @change="calculateRowState"
+                      v-model="$store.state.show.present"/>
+        </v-list-tile>
+        <v-list-tile>
+          <v-checkbox label="Future"
+                      @change="calculateRowState"
+                      v-model="$store.state.show.future"/>
+        </v-list-tile>
+      </v-list>
+
+      <v-list-tile v-if="!isLoggedIn" @click="$store.dispatch('auth/logIn')">
+        <v-list-tile-action>
+          <v-icon>lock_outline</v-icon>
+        </v-list-tile-action>
+        <v-list-tile-content>
+          <v-list-tile-title>Log In</v-list-tile-title>
+        </v-list-tile-content>
+      </v-list-tile>
+      <v-list-tile v-if="isLoggedIn" @click="$store.dispatch('auth/logOut')">
+        <v-list-tile-action>
+          <v-icon>lock_open</v-icon>
+        </v-list-tile-action>
+        <v-list-tile-content>
+          <v-list-tile-title>Log Out</v-list-tile-title>
+        </v-list-tile-content>
+      </v-list-tile>
+
+    </v-navigation-drawer>
+
+    <v-content>
+      <v-container fluid fill-height grid-list-md>
+        <router-view/>
+        <login-popup></login-popup>
+      </v-container>
+    </v-content>
+
+  </v-app>
+</template>
+
+<script>
+import firebase from '@firebase/app'
+import '@firebase/auth'
+
+import LoginPopup from '@/components/LoginPopup'
+
+export default {
+  components: {
+    LoginPopup
+  },
+  computed: {
+    isLoggedIn () {
+      return this.$store.state.auth.isLoggedIn;
+    },
+    projects () {
+      let projects = [];
+      _.forOwn(this.$store.state.projects, (value, key) => {
+        projects.push({
+          id: key,
+          name: value.name
+        });
+      });
+      console.log('projects', projects, this.$store.state.projects);
+      return projects;
+    },
+    selectedProject: {
+      get () {
+        return this.$store.getters.project;
+      },
+      set (project_id) {
+        this.$store.dispatch('selectProjectById', project_id);
+      }
+    },
+    avatarUrl () {
+      if (this.$store.state.auth.user) {
+        return this.$store.state.auth.user.photoURL;
+      }
+    },
+    userFullName () {
+      if (this.$store.state.auth.user) {
+        return this.$store.state.auth.user.displayName;
+      }
+    }
+  },
+  data: () => ({
+    drawer: false
+  }),
+  methods: {
+    calculateRowState() {
+      // Indicate row state with a poor-mans bitmask
+      let rowState = 0
+      if (this.$store.state.show.in_sight) {
+        rowState = rowState + 1
+      }
+      if (this.$store.state.show.out_of_mind) {
+        rowState = rowState + 10
+      }
+      this.$store.state.show.row_state = rowState
+    },
+
+    showNewProjectPopup () {
+      this.$store.commit('showNewProjectPopup');
+    },
+
+    newProject (project_name) {
+      this.$store.dispatch('newProject', { project_name });
+    }
+  },
+  mounted() {
+    // Listen for changes in authentication state
+    firebase.auth()
+      .onAuthStateChanged(user => {
+        console.log('onAuthStateChanged', user);
+        if (user) {
+          // User is signed in
+          this.$store.dispatch('auth/setAuthenticatedUser', user)
+            .then(() => {
+              this.$store.dispatch('listenToFirestore');
+            });
+        } else {
+          // User signed out
+          this.$store.dispatch('unsubscribeFromFirestore')
+            .then(() => {
+              this.$store.dispatch('auth/setAuthenticatedUser', null);
+            });
+        }
+      })
+
+    this.calculateRowState()
+  }
+}
+</script>

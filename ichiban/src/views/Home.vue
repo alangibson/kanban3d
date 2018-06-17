@@ -23,14 +23,11 @@
     <v-layout row
               :class="rowClass(index)"
               v-for="(s, index) in rowChunks()">
-      <v-flex xs3
-              v-for="index in s"
-              class="flex-item"
+      <v-flex v-for="index in s"
+              :class="colClass(index)"
               :key="index">
-        <!--<stage :index="index"-->
-               <!--:stage="$store.state.stages[$store.getters.project.stages[index].id]"-->
-               <!--:stageId="$store.getters.project.stages[index].id"></stage>-->
         <stage :index="index"
+               :class="colClass(index)"
                :stage="stageByIndex(index)"></stage>
       </v-flex>
     </v-layout>
@@ -106,6 +103,16 @@ export default {
       }
       return 'flex-row-maximized'
     },
+    colClass (index) {
+      if ((index === 0 || index === 4) && ! this.$store.state.show.future) {
+        return 'flex-item-hidden';
+      } else if ((index === 1 || index === 2 || index === 5 || index === 6 ) && ! this.$store.state.show.present) {
+        return 'flex-item-hidden';
+      } else if ((index === 3 || index === 7) && ! this.$store.state.show.past) {
+        return 'flex-item-hidden';
+      }
+      return 'flex-item';
+    },
     rowChunks () {
       // [[0,1,2,3], [4,5,6,7]]
       if (this.$store.getters.project) {
@@ -135,6 +142,13 @@ export default {
   min-height: 90%;
 }
 .flex-item {
+  flex: 1;
+}
+.flex-item-hidden {
+  width: 5ch;
+  flex: 0;
+  overflow: hidden;
+  /*background-color: #1976D2;*/
 }
 .flex-card {
   height: 100% !important;
