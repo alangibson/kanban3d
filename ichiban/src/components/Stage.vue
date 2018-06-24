@@ -10,13 +10,13 @@
                  :options="{group:'stages'}"
                  @change="handleChange"
                  @end="handleDrop"
-                 :data-stage-index="index"
                  :data-stage-id="stageId"
                  class="draggable">
 
         <topic v-for="(topic, index) in topics"
                :key="index"
-               :topic="topic">
+               :topic="topic"
+               :stage="stage">
         </topic>
 
       </draggable>
@@ -26,14 +26,14 @@
 
 <script>
 import draggable from 'vuedraggable';
-import { clone, TOPIC } from '@/common';
-import Topic from '@/components/Topic'
+import TopicComponent from '@/components/Topic'
+import { Event } from '@/models';
 
 export default {
   name: 'stage',
   components: {
     draggable,
-    Topic
+    Topic: TopicComponent
   },
   props: [
     'index',
@@ -54,16 +54,22 @@ export default {
     },
     topics: {
       get () {
-        // Note: Stage must always have a child topics array, or we will loose messages on drag target
+        // Note: Stage must always have a child topics array, or we will lose messages on drag target
         if (! this.stage) {
           return;
         }
-        console.log('rerender topics', this.stage.name, this.stage.id);
+        // Warning: it is possible to references in stages[].topics to topics that do not exist in topics collection
         return this.$store.state.stages[this.stage.id].topics
-          .map(topicRef => this.$store.state.topics[topicRef.id]);
+          .map(topicRef => {
+            // Only return something if we actually can find the topic
+            if (topicRef.id in this.$store.state.topics) {
+              return this.$store.state.topics[topicRef.id];
+            }
+          })
+          // Filter out nulls
+          .filter(topic => !!topic);
       },
       set (value) {
-        console.log('topics set', this.stage.name, value);
         this.$store.dispatch('setTopicsInStage', {
           topics: value,
           stage: this.stage
@@ -79,19 +85,21 @@ export default {
       this.$store.commit('showStagePopup', stage);
     },
     handleDrop (event) {
-      this.$store.dispatch('addEvent', {
-        type: 'TOPIC_MOVED',
-        topicId: event.item.dataset.topicId,
-        fromStageIndex: event.from.dataset.stageIndex,
-        toStageIndex: event.to.dataset.stageIndex,
-        createdAt: new Date()
-      });
+      // Warning: Not sure if these ad-hoc objects will cause problems in addEvent
+      this.$store.dispatch('addEvent',
+        new Event({
+          type: 'TOPIC_MOVED',
+          topic: { id: event.item.dataset.topicId },
+          stage: { id: event.to.dataset.stageId }
+        }));
+
+      // TODO if Stage is either 'Done' or 'Cancelled', set Topic.isInPastStage=true
+
     },
     handleChange (event) {
       if (event.added) {
         // We moved topic in to a stage
-        console.log('added', JSON.stringify(event.added.element.id));
-        let topicId = event.added.element.id;
+        // let topicId = event.added.element.id;
         // this.$store.dispatch('addEvent', {type: 'TOPIC_MOVED', to_stage: null});
       } else if (event.removed) {
         // We moved topic out of a stage

@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="value.visible"
+  <v-dialog v-model="isVisible"
             max-width="70vw"
             max-height="10vh"
             :hide-overlay="true">
@@ -83,8 +83,7 @@
                   </v-flex>
                 </v-layout>
               </v-flex>
-              <v-flex xs12
-                      v-if="value.stage_name">
+              <v-flex xs12>
                 <v-select
                     label="Stage"
                     required
@@ -104,7 +103,7 @@
         <v-spacer></v-spacer>
         <v-btn color="blue darken-1"
                flat
-               @click.native="cancelTopicPopup"
+               @click.native="closeTopicPopup"
                tabindex="7">
           Close
         </v-btn>
@@ -116,9 +115,9 @@
         </v-btn>
         <v-btn color="blue darken-1"
                flat
-               @click.native="saveTopicPopup"
+               @click.native="saveAndNewTopicPopup"
                tabindex="9">
-          Save
+          Save and New
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -127,27 +126,33 @@
 
 <script>
 import Vue from 'vue';
-import { clone, TOPIC, STAGE } from '@/common';
-
-import DateTimePicker from '@/components/DateTimePicker';
+import { Topic } from '@/models';
 
 // Note: VueQuillEditor is globally imported in index.html
 import MagicUrl from 'quill-magic-url';
-// import DateTimePicker from "./DateTimePicker";
 Quill.register('modules/magicUrl', MagicUrl);
 Vue.use(VueQuillEditor);
 
+function datetimeStringToDate (iso8601String) {
+  if (iso8601String) {
+    console.log('datetimeStringToDate', iso8601String.substring(0, 10));
+    return iso8601String.substring(0, 10);
+  }
+}
+
+function datetimeStringToTime (iso8601String) {
+  if (iso8601String) {
+    console.log('datetimeStringToTime', iso8601String.substring(11, 29));
+    return iso8601String.substring(11, 29);
+  }
+}
+
 export default {
-  components: {
-    DateTimePicker
-  },
   props: [
     'value'
   ],
-  data: () => ({
+  data: function () { return {
     dateTimePickerMenu: false,
-    pickerDate: null,
-    pickerTime: null,
     editor_config: {
       theme: 'snow',
       placeholder: "How and Why",
@@ -165,47 +170,89 @@ export default {
         magicUrl: true
       }
     },
-    selected_stage_id: null
-  }),
+    selectedStage: null
+  }},
   computed: {
-    dateTime () {
-      let tzOffset = (-(new Date().getTimezoneOffset()/60) + ':00').padStart(5, '0');
-      return '' + this.date + 'T' + this.time + '+' + tzOffset;
+    isVisible: {
+      get () {
+        // if (this.value.visible) {
+        //   // We have been opened
+        // } else {
+        //   // We have been closed
+        // }
+        return this.value.visible;
+      },
+      set (value) {
+        this.value.visible = value;
+      }
     },
     date: {
       get () {
-        return this.pickerDate;
+        if (! this.value.topic.when || this.value.topic.when === '') {
+          return datetimeStringToDate(new Date().toISOString());
+        } else {
+          return datetimeStringToDate(this.value.topic.when);
+        }
       },
       set (value) {
-        this.pickerDate = value;
         // Warning: side effect
-        let tzOffset = (-(new Date().getTimezoneOffset()/60) + ':00').padStart(5, '0');
-        this.value.topic.when = '' + value + 'T' + this.time + '+' + tzOffset;
+        // let tzOffset = (-(new Date().getTimezoneOffset()/60) + ':00').padStart(5, '0');
+        // this.value.topic.when = '' + value + 'T' + this.time + '+' + tzOffset;
+        this.value.topic.when = '' + value + 'T' + this.time;
       }
     },
     time: {
       get () {
-        return this.pickerTime;
+        if (! this.value.topic.when || this.value.topic.when === '') {
+          return datetimeStringToTime(new Date().toISOString());
+        } else {
+          return datetimeStringToTime(this.value.topic.when);
+        }
       },
       set (value) {
-        this.pickerTime = value;
-        // Warning: side effect
+        // Add time zone and seconds because these are not provided by the time picker
         let tzOffset = (-(new Date().getTimezoneOffset()/60) + ':00').padStart(5, '0');
-        this.value.topic.when = '' + this.pickerDate + 'T' + value + '+' + tzOffset;
+        // Warning: side effect
+        this.value.topic.when = '' + this.date + 'T' + value + ':00+' + tzOffset;
+        // this.value.topic.when = '' + this.date + 'T' + value;
+
       }
     },
     stages () {
-      return this.$store.getters.project.stages;
+      if (this.$store.getters.project) {
+        return this.$store.getters.project.stages;
+      } else {
+        return [];
+      }
     },
     selectedStageId: {
+      cache: false,
       get () {
-        if (! this.selected_stage_id) {
-          this.selected_stage_id = this.$store.getters.project.stages[0].id;
+        if (this.selectedStage) {
+          return this.selectedStage.id;
+        } else if (this.value.stage) {
+          // this.selectedStage = this.value.stage;
+          return this.value.stage.id;
+        } else if (this.$store.getters.project && this.$store.getters.project.stages[0]) {
+          // Fall back to first stage
+          // Warning: side effect
+          // this.selectedStage = this.$store.getters.project.stages[0];
+          // Set selected stage from default stage
+          return this.$store.getters.project.stages[0].id;
         }
-        return this.selected_stage_id;
       },
       set (value) {
-        this.selected_stage_id = value;
+        this.selectedStage = this.$store.state.stages[value];
+      }
+    },
+    stage () {
+      if (this.selectedStage) {
+        return this.selectedStage;
+      } else if (this.value.stage) {
+        return this.value.stage;
+      } else if (this.$store.getters.project && this.$store.getters.project.stages[0]) {
+        // Fall back to first stage
+        return this.$store.getters.project.stages[0];
       }
     }
   },
@@ -214,10 +261,9 @@ export default {
       return value !== null && value !== "";
     },
     resetTopicPopup () {
-      this.value.topic = clone(TOPIC);
-      let stage_name = this.value.stage_name;
+      this.value.topic = new Topic();
       this.$refs.topicForm.reset();
-      this.value.stage_name = stage_name;
+      this.selectedStage = null;
     },
     saveTopicPopup () {
       // Cancel save if form validation fails
@@ -225,27 +271,37 @@ export default {
         return;
       }
       // Save new topic
-      this.$store.dispatch('saveTopicToStageById', {
+      this.$store.dispatch('saveTopicToStage', {
         topic: this.value.topic,
-        stage_id: this.selected_stage_id
+        stage: this.stage
       });
+    },
+    saveAndNewTopicPopup () {
+      this.saveTopicPopup();
+      // Reset popup, preserving selected stage
+      let selectedStage = this.selectedStage;
       this.resetTopicPopup();
+      this.selectedStage = selectedStage;
     },
     saveAndCloseTopicPopup () {
       this.value.visible = false;
       this.saveTopicPopup();
+      this.resetTopicPopup();
     },
-    cancelTopicPopup () {
+    closeTopicPopup () {
       this.value.visible = false;
       this.resetTopicPopup();
     },
     showDateTimePicker () {
-      console.log('showDateTimePicker');
       this.showDateTimePicker = true;
     }
   },
   mounted () {
     document.getElementsByClassName("ql-editor")[0].tabIndex = 2;
+
+    // if (! this.selectedStage && this.$store.getters.project && this.$store.getters.project.stages[0]) {
+    //   this.selectedStage = this.$store.getters.project.stages[0];
+    // }
   }
 }
 </script>

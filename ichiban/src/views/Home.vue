@@ -60,7 +60,6 @@ import TopicPopup from '@/components/TopicPopup.vue';
 import ProjectPopup from '@/components/ProjectPopup.vue';
 import StagePopup from '@/components/StagePopup.vue';
 import Stage from '@/components/Stage.vue';
-import { clone, TOPIC, STAGE } from '@/common';
 
 export default {
   components: {
@@ -142,11 +141,11 @@ export default {
   min-height: 90%;
 }
 .flex-item {
-  flex: 1;
+  flex: 1 !important;
 }
 .flex-item-hidden {
   width: 5ch;
-  flex: 0;
+  flex: 0 !important;
   overflow: hidden;
   /*background-color: #1976D2;*/
 }

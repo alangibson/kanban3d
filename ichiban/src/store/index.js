@@ -3,9 +3,8 @@ import Vue from 'vue';
 import Vuex from 'vuex';
 import firebase from '@firebase/app';
 import '@firebase/firestore';
-import uuid from 'uuid/v4';
-import { clone, STAGE, TOPIC, PROJECT } from '@/common';
-import { PROJECTS, STAGES, TOPICS, EVENTS } from '@/defaults';
+import { clone, safeJSONStringify } from '@/common';
+import { Project, Stage, Topic, TopicRef, Event, ProjectsMap, StagesMap, TopicsMap, EventsCollection } from '@/models';
 import auth from '@/store/Auth';
 
 // firebase.firestore.setLogLevel('debug');
@@ -35,8 +34,7 @@ var unsubscribeStages = () => {};
  * Vue Configuration
  */
 
-Vue.use(Vuex)
-
+Vue.use(Vuex);
 
 const state = {
   // Show side menu?
@@ -52,48 +50,65 @@ const state = {
   },
   add_topic_popup: {
     visible: false,
-    stage: {},
-    stage_name: null,
-    topic: clone(TOPIC)
+    stage: null,
+    topic: new Topic(),
+    popup_type: 'add'
   },
   edit_topic_popup: {
     visible: false,
-    stage: {},
-    topic: clone(TOPIC)
+    stage: null,
+    topic: new Topic(),
+    popup_type: 'edit'
   },
   show_stage_popup: {
     visible: false,
-    stage: clone(STAGE)
+    stage: new Stage()
   },
   project_popup: {
     visible: false,
-    project: clone(PROJECT)
+    project: new Project()
   },
   activeProjectId: null,
-  projects: clone(PROJECTS),
-  stages: clone(STAGES),
-  topics: clone(TOPICS),
-  events: clone(EVENTS)
+  projects: new ProjectsMap(),
+  stages: new StagesMap(),
+  topics: new TopicsMap(),
+  events: new EventsCollection()
 };
 
 const getters = {
+  /**
+   * Gets current active project.
+   * Rebuilds Project->Stage->Topic hierarchy from flattened Firestore/Vuex structure.
+   */
   project (state) {
-    if (! state.projects[state.activeProjectId]) {
+    // See if there is a project with id of activeProjectId
+    if (! state.projects.hasProject(state.activeProjectId)) {
+      console.error('Could not find active project with id ', state.activeProjectId);
       return;
     }
-    let project = {};
-    _.assign(project, state.projects[state.activeProjectId]);
+    
+    // Create a cloned Project object
+    // TODO do in constructor?
+    let project = Object.assign(new Project(), state.projects[state.activeProjectId]);
+    
+    // Build Project->Stage->Topic heirarchy by resolving id references
     project.stages = state.projects[state.activeProjectId].stages
       .map(stageRef => {
-        let stage = {};
+        
+        // Create a Stage object
         if (! state.stages[stageRef.id]) {
           return;
         }
-        _.assign(stage, state.stages[stageRef.id]);
+        // TODO do in constructor?
+        let stage = Object.assign(new Stage(), state.stages[stageRef.id]);
+        
+        // Fill out Topics in stage
         stage.topics = state.stages[stageRef.id].topics
           .map(topicRef => state.topics[topicRef.id]);
+        
         return stage;
       });
+    
     return project;
   }
 };
@@ -105,61 +120,66 @@ const actions = {
   reset (context) {
     context.commit('reset');
   },
-  saveTopicToStageById (context, { topic, stage_id }) {
+  saveTopicToStage (context, { topic, stage }) {
+    
     // Updating existing topic or create new topic
-    if (context.state.topics[topic.id]) {
-      // Topic already exists in stage. Just need to update
+    if (context.state.topics.hasTopic(topic.id)) {
+      // Topic already exists, just update.
+      // Note: Does not set stage
+      
+      // TODO need catch block
+      // TODO why does topic disappear when topic.toFirestoreDoc throws error?
+      // Topic already exists in some stage. Just need to update.
       db.collection('projects')
         .doc(context.getters.project.id)
         .collection('topics')
         .doc(topic.id)
-        .update(topic);
-  
-      // TODO create event
-      context.dispatch('addEvent', {
-        type: 'TOPIC_MOVED',
-        topicId: topic.id,
-        // fromStageIndex: null,
-        toStageIndex: event.to.dataset.stageIndex,
-        createdAt: new Date()
-      });
+        .update(topic.toFirestoreDoc())
+        .then(() => {
+          // TODO We should support moving to different Stage when updating
+        })
+        .catch(error => {
+          console.error(error);
+        });
       
     } else {
-      // Topic doesnt exist in stage. Need to add.
-      db.collection('projects')
-        .doc(context.getters.project.id)
-        .collection('topics')
-        .add(topic)
-        .then(topicRef => {
+      // Topic doesn't exist in stage. Need to add.
       
+      // Get Project ref for Firestore
+      let projectRef = db
+        .collection('projects')
+        .doc(context.getters.project.id);
+      
+      // Add Topic to Project, then add Topic to Stage
+      projectRef
+        .collection('topics')
+        .add(topic.toFirestoreDoc())
+        .then(topicRef => {
+          // Need this to create event below
+          topic.id = topicRef.id;
           // Find stage in stages collection by id, then add topic ref to topics array
           // Dont update local data structure!
-          console.log('stage_id', stage_id);
-          db.collection('projects')
-            .doc(context.getters.project.id)
+          stage.topics.unshift(new TopicRef(topicRef.id, topicRef.path).toFirestoreDoc());
+          projectRef
             .collection('stages')
-            .doc(stage_id)
-            .get()
-            .then(stageSnapshot => {
-          
-              let stage = stageSnapshot.data();
-              stage.topics.unshift(topicRef);
-              db.collection('projects')
-                .doc(context.getters.project.id)
-                .collection('stages')
-                .doc(stage_id)
-                .update(stage);
-  
-              // TODO create event
-              context.dispatch('addEvent', {
-                type: 'TOPIC_CREATED',
-                topicId: topic.id,
-                // fromStageIndex: null,
-                toStageIndex: event.to.dataset.stageIndex,
-                createdAt: new Date()
-              });
-              
+            .doc(stage.id)
+            .update(stage.toFirestoreDoc())
+            .then(() => {
+              // Create event
+              context.dispatch('addEvent',
+                new Event({
+                  type: 'TOPIC_CREATED',
+                  topic: topic,
+                  stage: stage
+                })
+              );
+            })
+            .catch(error => {
+              console.error(error);
             });
+        })
+        .catch(error => {
+          console.error(error);
         });
     }
   },
@@ -196,32 +216,36 @@ const actions = {
           });
       });
   },
-  setTopicsInStage (context, {topics, stage}) {
-    // Note: topics can be empty array
-
+  /**
+   * Replace list of Topics in Stage with new list of Topics.
+   * @param context
+   * @param topics Can be empty array
+   * @param stage Stage to save Topics list to
+   */
+  setTopicsInStage (context, { topics, stage }) {
     // Update local state
-    context.commit('setTopicsInStage', {topics, stage});
+    // Causes glitch where topic jumps to previous stage when Firestore updates
+    // context.commit('setTopicsInStage', {topics, stage});
+  
+    // Turn TopicRef objects into real Firestore DocumentReferences
+    let newStage = stage.toFirestoreDoc();
+    newStage.topics = topics
+      .map(topic => db.doc(topic.ref.path));
     
-    // Update Firestore
-    let topicRefs = topics.map(topic => db.doc(topic.ref.path));
     db.collection('projects')
       .doc(context.getters.project.id)
       .collection('stages')
       .doc(stage.id)
-      .get()
-      .then(stageSnapshot => {
-        let newStage = stageSnapshot.data();
-        newStage.topics = topicRefs;
-        db.collection('projects')
-          .doc(context.getters.project.id)
-          .collection('stages')
-          .doc(stage.id)
-          .update(newStage);
-      });
-
+      .update(newStage);
+    
     // TODO add event
     // context.dispatch('addEvent', {event_type: 'TOPIC_MOVED', topic: })
   },
+  /**
+   * Set active poject and start listening to Firestore.
+   * @param context
+   * @param project_id
+   */
   selectProjectById (context, project_id) {
     context.commit('setActiveProjectId', project_id);
     context.dispatch('listenToFirestore');
@@ -261,17 +285,25 @@ const actions = {
         
       });
   },
-  addEvent (context, { type, topicId, fromStageIndex, toStageIndex, createdAt }) {
-    // TODO save stage names
+  addEvent (context, event) {
+    let topicRef = db
+      .collection('projects')
+      .doc(context.getters.project.id)
+      .collection('topics')
+      .doc(event.topic.id);
+    let stageRef = db
+      .collection('projects')
+      .doc(context.getters.project.id)
+      .collection('stages')
+      .doc(event.stage.id);
     db.collection('projects')
       .doc(context.getters.project.id)
       .collection('events')
       .add({
-        type,
-        topicId,
-        fromStageIndex,
-        toStageIndex,
-        createdAt
+        type: event.type,
+        topic: topicRef,
+        stage: stageRef,
+        createdAt: event.createdAt
       });
   },
   listenToFirestore (context) {
@@ -281,21 +313,14 @@ const actions = {
     // Start listening for stages and topics once we have loaded projects
     unsubscribeProjects = db.collection('projects')
       .where('owner_id', '==', context.state.auth.user.uid)
-      .onSnapshot(querySnapshot => {
-        
+      .onSnapshot(projectsSnapshot => {
         // Load up all projects
-        let projects = {};
-        querySnapshot.forEach(projectSnapshot => {
-          let project = projectSnapshot.data();
-          project.id = projectSnapshot.id;
-          projects[projectSnapshot.id] = project;
-        });
-        context.commit('setProjects', projects);
+        context.commit('setProjects', ProjectsMap.fromSnapshot(projectsSnapshot));
   
         // Set default project if needed
         // Do this here because the is the earliest point where we know which projects are available.
         if (! context.state.activeProjectId) {
-          context.commit('setActiveProjectId', querySnapshot.docs[0].id);
+          context.commit('setActiveProjectId', projectsSnapshot.docs[0].id);
         }
   
         // Listen for Topics
@@ -303,14 +328,8 @@ const actions = {
           .doc(context.state.activeProjectId)
           .collection('topics')
           .onSnapshot(topicsSnapshot => {
-            let topics = context.state.topics;
-            topicsSnapshot.forEach(topicSnapshot => {
-              let topic = topicSnapshot.data();
-              topic.id = topicSnapshot.id;
-              topic.ref = { path: topicSnapshot.ref.path };
-              topics[topicSnapshot.id] = topic;
-            });
-            context.commit('setTopics', topics);
+            // Load up all Topics
+            context.commit('setTopics', TopicsMap.fromSnapshot(topicsSnapshot));
           });
   
         // Listen for Stages
@@ -318,18 +337,9 @@ const actions = {
           .doc(context.state.activeProjectId)
           .collection('stages')
           .onSnapshot(stagesSnapshot => {
-            let stages = {};
-            stagesSnapshot.forEach(stageSnapshot => {
-              let data = stageSnapshot.data();
-              // HACK do we need to unpack data() like this?
-              stages[stageSnapshot.id] = {
-                id: stageSnapshot.id,
-                name: data.name,
-                topics: data.topics
-                  .map(topicRef => ( {id: topicRef.id, path: topicRef.path, ref: topicRef} ))
-              };
-            });
-            context.commit('setStages', stages);
+            // Load up all Stages
+            context.commit('setStages', StagesMap.fromSnapshot(stagesSnapshot));
+            
           });
       });
   },
@@ -345,10 +355,10 @@ const mutations = {
    * Reset state to initial state
    */
   reset (state) {
-    state.projects = clone(PROJECTS);
-    state.topics = clone(TOPICS);
-    state.stages = clone(STAGES);
-    state.events = clone(EVENTS);
+    state.projects = new ProjectsMap();
+    state.topics = new TopicsMap();
+    state.stages = new StagesMap();
+    state.events = new EventsCollection();
     state.activeProjectId = null;
     state.drawer = false;
   },
@@ -380,15 +390,14 @@ const mutations = {
   // Topic popups
   //
   showAddTopicPopup (state, stage) {
-    state.add_topic_popup.topic = clone(TOPIC);
-    if (stage) {
-      state.add_topic_popup.stage = stage;
-      state.add_topic_popup.stage_name = stage.name;
-    }
+    state.add_topic_popup.topic = new Topic();
+    state.add_topic_popup.stage = stage;
     state.add_topic_popup.visible = true;
   },
-  showEditTopicPopup (state, topic) {
+  showEditTopicPopup (state, { topic, stage }) {
+    console.log('showEditTopicPopup', topic.name, stage.name);
     state.edit_topic_popup.topic = topic;
+    state.edit_topic_popup.stage = stage;
     state.edit_topic_popup.visible = true;
   },
   //

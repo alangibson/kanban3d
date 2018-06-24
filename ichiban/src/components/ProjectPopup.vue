@@ -39,7 +39,7 @@
 </template>
 
 <script>
-import { clone, PROJECT } from '@/common';
+import { Project } from '@/models';
 
 export default {
   props: [
@@ -52,7 +52,7 @@ export default {
       return value !== null && value !== "";
     },
     resetPopup () {
-      this.value.project = clone(PROJECT);
+      this.value.project = new Project();
       // let stage_name = this.value.stage_name;
       this.$refs.projectForm.reset();
       // this.value.stage_name = stage_name;
