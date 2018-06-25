@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import Vue from 'vue';
 import Vuex from 'vuex';
+import createPersistedState from 'vuex-persistedstate'
 import firebase from '@firebase/app';
 import '@firebase/firestore';
 import { clone, safeJSONStringify } from '@/common';
@@ -306,6 +307,26 @@ const actions = {
         createdAt: event.createdAt
       });
   },
+  
+  //
+  // Menus, visibility
+  //
+  
+  showAddTopicPopup (context, stage) {
+    if (! context.getters.project) {
+      return;
+    }
+    // Default to first Stage
+    if (! stage) {
+      stage = context.getters.project.stages[0];
+    }
+    context.commit('showAddTopicPopup', stage);
+  },
+  
+  //
+  // Firestore
+  //
+  
   listenToFirestore (context) {
     // Listen for changes
     
@@ -414,9 +435,16 @@ const modules = {
 };
 
 export default new Vuex.Store({
+  plugins: [
+    createPersistedState({
+      paths: [
+        'activeProjectId'
+      ]
+    })
+  ],
+  modules,
   state,
   actions,
   mutations,
-  getters,
-  modules
+  getters
 })

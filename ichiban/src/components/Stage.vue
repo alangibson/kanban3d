@@ -1,9 +1,28 @@
 <template>
+
+  
+
   <v-card class="flex-card elevation-4">
-    <v-card-title class="subheader">
-      <a @click="showStagePopup(stage)">
-        {{ stageName }}
-      </a>
+    <v-card-title class="subheader"
+                  @mouseover="showStageTitleButtons = true"
+                  @mouseout="showStageTitleButtons = false">
+
+        <v-flex xs10>
+          <a @click="showStagePopup(stage)">
+            {{ stageName }}
+          </a>
+        </v-flex>
+        <v-flex xs1 v-show="showStageTitleButtons">
+          <a @click="$store.dispatch('showAddTopicPopup', stage)">
+            <v-icon>add</v-icon>
+          </a>
+        </v-flex>
+        <v-flex xs1 v-show="showStageTitleButtons">
+          <a @click="showStagePopup(stage)">
+            <v-icon>open_in_new</v-icon>
+          </a>
+        </v-flex>
+
     </v-card-title>
     <v-card-text class="flex-card-body">
       <draggable v-model="topics"
@@ -39,6 +58,9 @@ export default {
     'index',
     'stage'
   ],
+  data: () => ({
+    showStageTitleButtons: false
+  }),
   computed: {
     stageId () {
       if (! this.stage) {
@@ -110,3 +132,14 @@ export default {
   }
 }
 </script>
+
+<style>
+.stage-column-hidden {
+  border: 1px solid red;
+
+  -webkit-transform: rotate(-90deg);
+  -moz-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+}
+</style>

@@ -76,15 +76,16 @@ export default {
   },
   methods: {
     showAddTopicPopup (stage) {
-      if (! this.$store.getters.project) {
-        return;
-      }
-      // Default to first Stage
-      console.log('showAddTopicPopup', stage, this.$store.getters.project.stages[0]);
-      if (! stage) {
-        stage = this.$store.getters.project.stages[0];
-      }
-      this.$store.commit('showAddTopicPopup', stage);
+      // if (! this.$store.getters.project) {
+      //   return;
+      // }
+      // // Default to first Stage
+      // console.log('showAddTopicPopup', stage, this.$store.getters.project.stages[0]);
+      // if (! stage) {
+      //   stage = this.$store.getters.project.stages[0];
+      // }
+      // this.$store.commit('showAddTopicPopup', stage);
+      this.$store.dispatch('showAddTopicPopup', stage);
     },
     stageByIndex (index) {
       return this.$store.getters.project.stages[index];
