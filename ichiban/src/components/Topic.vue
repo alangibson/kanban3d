@@ -1,6 +1,6 @@
 <template>
   <v-card :data-topic-id="topic.id"
-          class="elevation-2 mb-1">
+          class="topic elevation-2 mb-1">
     <v-card-title @click="showEditTopicPopup">
       {{ topicName(topic) }}
       <v-chip v-if="countdown">{{countdown}}</v-chip>

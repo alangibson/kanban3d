@@ -135,8 +135,18 @@ export default {
 .flex-row-minimized {
   height: 5vh !important;
 }
+.flex-row-minimized .topic {
+  display: none;
+}
+/*.flex-row-minimized .stage {*/
+  /*overflow: hidden;*/
+/*}*/
+.flex-row-minimized .stage .flex-card-body {
+  height: 50px !important;
+  overflow: hidden;
+}
 .flex-row-maximized {
-  height: 93vh !important;
+  height: 80vh !important;
 }
 .draggable {
   min-height: 90%;
@@ -155,7 +165,8 @@ export default {
   overflow: hidden;
 }
 .flex-card-body {
-  height: 93% !important;
+  /*height: 93% !important;*/
+  height: 93%;
   overflow-y: auto;
 }
 .fab-container {

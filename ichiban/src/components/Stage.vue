@@ -1,8 +1,5 @@
 <template>
-
-  
-
-  <v-card class="flex-card elevation-4">
+  <v-card class="stage flex-card elevation-4">
     <v-card-title class="subheader"
                   @mouseover="showStageTitleButtons = true"
                   @mouseout="showStageTitleButtons = false">
@@ -31,13 +28,11 @@
                  @end="handleDrop"
                  :data-stage-id="stageId"
                  class="draggable">
-
         <topic v-for="(topic, index) in topics"
                :key="index"
                :topic="topic"
                :stage="stage">
         </topic>
-
       </draggable>
     </v-card-text>
   </v-card>
