@@ -22,7 +22,8 @@
     <!-- Stages -->
     <v-layout row
               :class="rowClass(index)"
-              v-for="(s, index) in rowChunks()">
+              v-for="(s, index) in rowChunks()"
+              :key="index">
       <v-flex v-for="index in s"
               :class="colClass(index)"
               :key="index">
@@ -76,15 +77,6 @@ export default {
   },
   methods: {
     showAddTopicPopup (stage) {
-      // if (! this.$store.getters.project) {
-      //   return;
-      // }
-      // // Default to first Stage
-      // console.log('showAddTopicPopup', stage, this.$store.getters.project.stages[0]);
-      // if (! stage) {
-      //   stage = this.$store.getters.project.stages[0];
-      // }
-      // this.$store.commit('showAddTopicPopup', stage);
       this.$store.dispatch('showAddTopicPopup', stage);
     },
     stageByIndex (index) {
@@ -119,9 +111,6 @@ export default {
         return _.chunk(_.range(this.$store.getters.project.stages.length), 4);
       }
     }
-  },
-  mounted() {
-    console.log('Home mounted');
   }
 }
 </script>

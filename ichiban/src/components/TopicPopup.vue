@@ -84,7 +84,9 @@
                 </v-layout>
               </v-flex>
               <v-flex xs12>
+                <!-- Following v-if is to prevent exceptions on page load -->
                 <v-select
+                    v-if="!!selectedStageId"
                     label="Stage"
                     required
                     :rules="[requiredRule]"
@@ -92,7 +94,8 @@
                     :items="stages"
                     item-text="name"
                     item-value="id"
-                    tabindex="6"/>
+                    tabindex="6">
+                </v-select>
               </v-flex>
             </v-layout>
           </v-form>
@@ -215,14 +218,11 @@ export default {
         // Warning: side effect
         this.value.topic.when = '' + this.date + 'T' + value + ':00+' + tzOffset;
         // this.value.topic.when = '' + this.date + 'T' + value;
-
       }
     },
     stages () {
-      if (this.$store.getters.project) {
+      if (this.$store.getters.project && this.$store.getters.project.stages) {
         return this.$store.getters.project.stages;
-      } else {
-        return [];
       }
     },
     selectedStageId: {
@@ -235,9 +235,6 @@ export default {
           return this.value.stage.id;
         } else if (this.$store.getters.project && this.$store.getters.project.stages[0]) {
           // Fall back to first stage
-          // Warning: side effect
-          // this.selectedStage = this.$store.getters.project.stages[0];
-          // Set selected stage from default stage
           return this.$store.getters.project.stages[0].id;
         }
       },
