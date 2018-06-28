@@ -1,5 +1,5 @@
 <template>
-  <v-card :data-topic-id="topic.id"
+  <v-card :data-topic-id="topicRef.id"
           class="topic elevation-2 mb-1">
     <v-card-title @click="showEditTopicPopup">
       {{ topicName(topic) }}
@@ -14,7 +14,7 @@ import momentDurationFormat from 'moment-duration-format';
 
 export default {
   props: [
-    'topic',
+    'topicRef',
     'stage'
   ],
   data: () => ({
@@ -28,6 +28,11 @@ export default {
       if (topic) {
         return topic.name;
       }
+    }
+  },
+  computed: {
+    topic () {
+      return this.$store.state.topics[this.topicRef.id];
     }
   },
   created () {

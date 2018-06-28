@@ -3,23 +3,21 @@
     <v-card-title class="subheader"
                   @mouseover="showStageTitleButtons = true"
                   @mouseout="showStageTitleButtons = false">
-
-        <v-flex xs10>
-          <a @click="showStagePopup(stage)">
-            {{ stageName }}
-          </a>
-        </v-flex>
-        <v-flex xs1 v-show="showStageTitleButtons">
-          <a @click="$store.dispatch('showAddTopicPopup', stage)">
-            <v-icon>add</v-icon>
-          </a>
-        </v-flex>
-        <v-flex xs1 v-show="showStageTitleButtons">
-          <a @click="showStagePopup(stage)">
-            <v-icon>open_in_new</v-icon>
-          </a>
-        </v-flex>
-
+      <v-flex xs10>
+        <a @click="showStagePopup(stage)">
+          {{ stageName }}
+        </a>
+      </v-flex>
+      <v-flex xs1 v-show="showStageTitleButtons">
+        <a @click="$store.dispatch('showAddTopicPopup', stage)">
+          <v-icon>add</v-icon>
+        </a>
+      </v-flex>
+      <v-flex xs1 v-show="showStageTitleButtons">
+        <a @click="showStagePopup(stage)">
+          <v-icon>open_in_new</v-icon>
+        </a>
+      </v-flex>
     </v-card-title>
     <v-card-text class="flex-card-body">
       <draggable v-model="topics"
@@ -28,9 +26,9 @@
                  @end="handleDrop"
                  :data-stage-id="stageId"
                  class="draggable">
-        <topic v-for="(topic, index) in topics"
+        <topic v-for="(topicRef, index) in topics"
                :key="index"
-               :topic="topic"
+               :topicRef="topicRef"
                :stage="stage">
         </topic>
       </draggable>
@@ -54,7 +52,8 @@ export default {
     'stage'
   ],
   data: () => ({
-    showStageTitleButtons: false
+    showStageTitleButtons: false,
+    // topics: []
   }),
   computed: {
     stageId () {
@@ -69,28 +68,64 @@ export default {
       }
       return this.stage.name;
     },
+    // /**
+    //  * Only exists so we can watch it with a watcher.
+    //  */
+    // firestoreTopics () {
+    //   // Note: Stage must always have a child topics array, or we will lose messages on drag target
+    //   if (! this.stage) {
+    //     return;
+    //   }
+    //   // Warning: it is possible to references in stages[].topics to topics that do not exist in topics collection
+    //   // debugger;
+    //   return this.$store.state.stages[this.stage.id].topics
+    //     .map(topicRef => {
+    //       // Only return something if we actually can find the topic
+    //       if (topicRef.id in this.$store.state.topics) {
+    //         return this.$store.state.topics[topicRef.id];
+    //       }
+    //     })
+    //     // Filter out nulls
+    //     .filter(topic => !!topic);
+    // },
+    // topics: {
+    //   get () {
+    //     // Note: Stage must always have a child topics array, or we will lose messages on drag target
+    //     if (! this.stage) {
+    //       return;
+    //     }
+    //     // Warning: it is possible to references in stages[].topics to topics that do not exist in topics collection
+    //     // debugger;
+    //     return this.$store.state.stages[this.stage.id].topics
+    //       .map(topicRef => {
+    //         // Only return something if we actually can find the topic
+    //         if (topicRef.id in this.$store.state.topics) {
+    //           return this.$store.state.topics[topicRef.id];
+    //         }
+    //       })
+    //       // Filter out nulls
+    //       .filter(topic => !!topic);
+    //   },
+    //   set (topics) {
+    //     // debugger;
+    //     // this.$store.dispatch('setTopicsInStage', {
+    //     //   topics: topics,
+    //     //   stage: this.stage
+    //     // })
+    //     console.log('set topics', this.stage.name, topics);
+    //   }
+    // }
     topics: {
       get () {
-        // Note: Stage must always have a child topics array, or we will lose messages on drag target
         if (! this.stage) {
           return;
         }
-        // Warning: it is possible to references in stages[].topics to topics that do not exist in topics collection
-        return this.$store.state.stages[this.stage.id].topics
-          .map(topicRef => {
-            // Only return something if we actually can find the topic
-            if (topicRef.id in this.$store.state.topics) {
-              return this.$store.state.topics[topicRef.id];
-            }
-          })
-          // Filter out nulls
-          .filter(topic => !!topic);
+        return this.$store.state.stages[this.stage.id].topics;
       },
-      set (value) {
-        this.$store.dispatch('setTopicsInStage', {
-          topics: value,
-          stage: this.stage
-        })
+      set (topics) {
+        // Prevent glitches when drag and dropping
+        // We will actually write to Firestore in drop event handler
+        this.$store.commit('setTopicsInStage', {topics, stage: this.stage});
       }
     }
   },
@@ -112,6 +147,18 @@ export default {
 
       // TODO if Stage is either 'Done' or 'Cancelled', set Topic.isInPastStage=true
 
+      // TODO instead of handleChange, we should have an atomic operation to move Topic from one Stage to Another
+      console.log(event);
+      // event.end.from.dataSet.stageId
+      // event.end.to.dataSet.stageId
+      // event.end.item.dataSet.topicId
+      // debugger;
+      // console.log('EVENT', event.item);
+      this.$store.dispatch('moveTopicById', {
+        topicId: event.item.dataset.topicId,
+        fromStageId: event.from.dataset.stageId,
+        toStageId: event.to.dataset.stageId
+      });
     },
     handleChange (event) {
       if (event.added) {
@@ -123,15 +170,25 @@ export default {
       } else if (event.moved) {
         // We changed sort order of a stage
       }
+
+      // console.log(event);
+      // this.$store.dispatch('setTopicsInStage', {
+      //   topics: this.topics,
+      //   stage: this.stage
+      // })
     }
-  }
+  },
+  // watch: {
+  //   firestoreTopics (newValue) {
+  //     this.topics = newValue;
+  //   }
+  // }
 }
 </script>
 
 <style>
 .stage-column-hidden {
   border: 1px solid red;
-
   -webkit-transform: rotate(-90deg);
   -moz-transform: rotate(-90deg);
   -ms-transform: rotate(-90deg);

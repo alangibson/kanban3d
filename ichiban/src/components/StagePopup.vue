@@ -10,12 +10,12 @@
                        :key="index">
             <v-list-tile-content>
               <a @click="showEditTopicPopup(topic, stage)">
-                <v-list-tile-title v-html="topic.name"></v-list-tile-title>
+                <v-list-tile-title v-html="safeTopic(topic).name"></v-list-tile-title>
               </a>
-              <v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>
+              <v-list-tile-sub-title v-html="safeTopic(topic).description"></v-list-tile-sub-title>
             </v-list-tile-content>
             <v-list-tile-action>
-              <v-btn @click="deleteTopicFromStageByIndex(index)">
+              <v-btn @click="deleteTopic(topic, index)">
                 <v-icon>delete</v-icon>
               </v-btn>
             </v-list-tile-action>
@@ -40,10 +40,16 @@ export default {
     showEditTopicPopup (topic, stage) {
       this.$store.commit('showEditTopicPopup', { topic, stage });
     },
-    deleteTopicFromStageByIndex (index) {
-      this.$store.dispatch('deleteTopicFromStageByIndex', {stage: this.value.stage, topic_index: index});
+    deleteTopic (topic, topic_index) {
+      this.$store.dispatch('deleteTopicFromStage', {stage: this.value.stage, topic: topic, topic_index: topic_index});
       // HACK delete from our stage since it isnt reacting for some reason
-      this.value.stage.topics.splice(index, 1);
+      this.value.stage.topics.splice(topic_index, 1);
+    },
+    safeTopic (topic) {
+      // HACK because there are nulls in stage.topic when it is out of sync with topics collection
+      if (!topic) {
+        return {name:null, description:null}
+      }
     }
   }
 }
