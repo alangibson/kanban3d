@@ -29,7 +29,8 @@
               :key="index">
         <stage :index="index"
                :class="colClass(index)"
-               :stage="stageByIndex(index)"></stage>
+               :stage="stageByIndex(index)">
+        </stage>
       </v-flex>
     </v-layout>
 

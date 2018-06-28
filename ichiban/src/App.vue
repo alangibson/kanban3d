@@ -33,7 +33,14 @@
         </v-list-tile>
         <v-list-tile>
           <v-list-tile-content>
-            <v-btn @click="showNewProjectPopup">New Project</v-btn>
+            <v-layout>
+              <v-flex xs6>
+                <v-btn @click="deleteProject">Delete</v-btn>
+              </v-flex>
+              <v-flex xs6>
+                <v-btn @click="showNewProjectPopup">New</v-btn>
+              </v-flex>
+            </v-layout>
           </v-list-tile-content>
         </v-list-tile>
 
@@ -155,13 +162,14 @@ export default {
       }
       this.$store.state.show.row_state = rowState
     },
-
     showNewProjectPopup () {
       this.$store.commit('showNewProjectPopup');
     },
-
     newProject (project_name) {
       this.$store.dispatch('newProject', { project_name });
+    },
+    deleteProject () {
+      this.$store.dispatch('deleteProject', this.selectedProject);
     }
   },
   mounted() {

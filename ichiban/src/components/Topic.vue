@@ -30,13 +30,18 @@ export default {
       }
     }
   },
-  mounted () {
+  created () {
     // TODO only need minute resolution
     // TODO stop timer when dropped in 'done' stat
     if (this.topic && this.topic.when) {
       this.$options.interval = setInterval(() => {
         let msLeft = Date.parse(this.topic.when) - new Date().getTime();
-        this.countdown = moment.duration(msLeft/1000, 'seconds').format();
+        if (msLeft <= 0) {
+          this.countdown = '00:00';
+          clearInterval(this.$options.interval);
+        } else {
+          this.countdown = moment.duration(msLeft/1000, 'seconds').format();
+        }
       }, 1000);
     }
   },
@@ -46,14 +51,19 @@ export default {
       handler: function (value) {
         // Kill earlier timer in case we are reloading
         clearInterval(this.$options.interval);
-        this.countdown = null;
+        // this.countdown = null;
         // Start new timer
         // TODO only need minute resolution
         // TODO stop timer when dropped in 'done' state
         if (this.topic && this.topic.when && this.topic.when !== '') {
           this.$options.interval = setInterval(() => {
             let msLeft = Date.parse(this.topic.when) - new Date().getTime();
-            this.countdown = moment.duration(msLeft/1000, 'seconds').format();
+            if (msLeft <= 0) {
+              this.countdown = '00:00';
+              clearInterval(this.$options.interval);
+            } else {
+              this.countdown = moment.duration(msLeft/1000, 'seconds').format();
+            }
           }, 1000);
         }
       }
