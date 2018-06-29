@@ -3,14 +3,21 @@
           class="topic elevation-2 mb-1">
     <v-card-title @click="showEditTopicPopup">
       {{ topicName(topic) }}
-      <v-chip v-if="countdown">{{countdown}}</v-chip>
+      <v-chip v-if="topic"
+              v-for="(tag, index) in topic.tags"
+              small>
+        {{tag}}
+      </v-chip>
+      <v-chip v-if="countdown" small>{{countdown}}</v-chip>
     </v-card-title>
   </v-card>
 </template>
 
 <script>
 import moment from 'moment';
+import ColorHash from 'color-hash';
 import momentDurationFormat from 'moment-duration-format';
+import { Topic } from '@/models';
 
 export default {
   props: [
@@ -26,13 +33,23 @@ export default {
     },
     topicName (topic) {
       if (topic) {
-        return topic.name;
+        return topic.sanitizedName;
       }
+    },
+    tagColor (tag) {
+      console.log(new ColorHash().hex(tag));
+      return new ColorHash().hex(tag);
     }
   },
   computed: {
     topic () {
-      return this.$store.state.topics[this.topicRef.id];
+      let topic = this.$store.state.topics[this.topicRef.id];
+      if (topic) {
+        return topic;
+      } else {
+        // TODO return a real Topic object
+        return { topics: [] }
+      }
     }
   },
   created () {

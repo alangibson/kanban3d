@@ -107,18 +107,34 @@ export class StageRef {
   }
 }
 
-
 export class Topic {
   constructor () {
     this.id = null;           // uuid as string
-    this.name = null;         // string
+    this._name = null;         // string
     this.description = null;  // string
     this.who = null;          // string
     this.when = null;         // ISO8601 datetime as string
     this.where = null;        // string
+    this.tags = [];           // array of string
     this.createdAt = new Date();
   }
-  
+
+  get name () {
+    return this._name;
+  }
+
+  /**
+   * Name with tags stripped out.
+   */
+  get sanitizedName () {
+    return this._name.replace(/#\w*/gi, '');
+  }
+
+  set name (name) {
+    this._name = name;
+    this.tags = name.match(/#(\w*)/gi);
+  }
+
   static fromSnapshot (topicSnapshot) {
     let topic = new Topic();
     topic.name = topicSnapshot.data().name;
@@ -136,6 +152,10 @@ export class Topic {
     if (topicSnapshot.data().descripition) {
       topic.description = topicSnapshot.data().descripition;
     }
+    // HACK backwards compatability
+    if (topicSnapshot.data().tags) {
+      topic.tags = topicSnapshot.data().tags;
+    }
     return topic;
   }
   
@@ -150,6 +170,7 @@ export class Topic {
       when: this.when,
       where: this.where,
       createdAt: this.createdAt,
+      tags: this.tags,
       // TODO id should not be included
       id: this.id
     };
@@ -158,7 +179,6 @@ export class Topic {
     if (this.ref) {
       doc.ref = this.ref.toFirestoreDoc();
     }
-    console.log('doc', doc);
     return doc;
   }
 }

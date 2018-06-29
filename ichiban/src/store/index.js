@@ -125,7 +125,7 @@ const actions = {
     context.commit('reset');
   },
   saveTopicToStage (context, { topic, stage }) {
-    
+
     // Updating existing topic or create new topic
     if (context.state.topics.hasTopic(topic.id)) {
       // Topic already exists, just update.
