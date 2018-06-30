@@ -117,8 +117,10 @@ export default {
 </script>
 
 <style>
+
 .flex-column {
 }
+
 .flex-row {
   height: 49vh !important;
 }
@@ -128,9 +130,6 @@ export default {
 .flex-row-minimized .topic {
   display: none;
 }
-/*.flex-row-minimized .stage {*/
-  /*overflow: hidden;*/
-/*}*/
 .flex-row-minimized .stage .flex-card-body {
   height: 50px !important;
   overflow: hidden;
@@ -138,18 +137,30 @@ export default {
 .flex-row-maximized {
   height: 80vh !important;
 }
+
 .draggable {
   min-height: 90%;
 }
+
 .flex-item {
   flex: 1 !important;
 }
+
 .flex-item-hidden {
-  width: 5ch;
+  min-width: 5ch;
   flex: 0 !important;
   overflow: hidden;
-  /*background-color: #1976D2;*/
 }
+.flex-item-hidden .card__title.subheader {
+  -webkit-transform: rotate(90deg);
+  -moz-transform: rotate(90deg);
+  -ms-transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+}
+.flex-item-hidden .topic {
+  display: none;
+}
+
 .flex-card {
   height: 100% !important;
   overflow: hidden;
@@ -159,6 +170,7 @@ export default {
   height: 93%;
   overflow-y: auto;
 }
+
 .fab-container {
   position: fixed;
   bottom: 0;
@@ -166,4 +178,5 @@ export default {
   max-height: 160px;
   z-index: 100;
 }
+
 </style>
