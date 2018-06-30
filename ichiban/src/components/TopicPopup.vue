@@ -130,6 +130,7 @@
 <script>
 import Vue from 'vue';
 import { Topic } from '@/models';
+import '@/assets/js/quill-task-list';
 
 // Note: VueQuillEditor is globally imported in index.html
 import MagicUrl from 'quill-magic-url';
@@ -158,11 +159,11 @@ export default {
     dateTimePickerMenu: false,
     editor_config: {
       theme: 'snow',
-      placeholder: "How and Why",
+      placeholder: "Details",
       modules: {
         toolbar: [
           ['bold', 'italic', 'underline', 'strike'],
-          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
           [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
           [{ 'color': [] }, { 'background': [] }],
           [{ 'font': [] }],
@@ -259,6 +260,7 @@ export default {
     },
     resetTopicPopup () {
       this.value.topic = new Topic();
+      // TODO on reset(), getting exception "Error in event handler for "input": "TypeError: name is null""
       this.$refs.topicForm.reset();
       this.selectedStage = null;
     },
