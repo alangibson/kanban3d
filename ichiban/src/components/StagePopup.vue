@@ -6,13 +6,14 @@
       </v-card-title>
       <v-card-text>
         <v-list>
-          <v-list-tile v-for="(topic, index) in stage.topics"
+          <v-list-tile v-if="stage.topics"
+                       v-for="(topic, index) in stage.topics"
                        :key="index">
             <v-list-tile-content>
               <a @click="showEditTopicPopup(topic, stage)">
-                <v-list-tile-title v-html="safeTopic(topic).name"></v-list-tile-title>
+                <v-list-tile-title v-html="topic.name"></v-list-tile-title>
               </a>
-              <v-list-tile-sub-title v-html="safeTopic(topic).description"></v-list-tile-sub-title>
+              <v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>
             </v-list-tile-content>
             <v-list-tile-action>
               <v-btn @click="deleteTopic(topic, index)">
