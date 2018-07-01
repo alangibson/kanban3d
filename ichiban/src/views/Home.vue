@@ -10,11 +10,15 @@
     <v-layout column
               class="fab-container">
       <v-btn fab
-             v-on:click="showAddTopicPopup()">
+             v-shortkey="['ctrl', 'shift', 'n']"
+             @shortkey="showAddTopicPopup"
+             @click="showAddTopicPopup">
         <v-icon>add</v-icon>
       </v-btn>
       <v-btn fab
-             @click.stop="$store.state.drawer = !$store.state.drawer">
+             v-shortkey="['ctrl', 'm']"
+             @shortkey="toggleNavigationDrawer"
+             @click.stop="toggleNavigationDrawer">
         <v-icon>menu</v-icon>
       </v-btn>
     </v-layout>
@@ -77,6 +81,9 @@ export default {
     }
   },
   methods: {
+    toggleNavigationDrawer () {
+      this.$store.state.drawer = ! this.$store.state.drawer;
+    },
     showAddTopicPopup (stage) {
       this.$store.dispatch('showAddTopicPopup', stage);
     },
