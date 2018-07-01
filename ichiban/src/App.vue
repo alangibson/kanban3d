@@ -7,6 +7,7 @@
         v-model="$store.state.drawer">
       <v-list dense>
 
+        <!-- user name and avatar -->
         <v-list-tile avatar>
           <v-list-tile-avatar>
             <img :src="avatarUrl">
@@ -14,11 +15,26 @@
           <v-list-tile-content>
             <v-list-tile-title>{{userFullName}}</v-list-tile-title>
           </v-list-tile-content>
+          <v-list-tile-action>
+              <!--<v-list-tile v-if="!isLoggedIn" @click="$store.dispatch('auth/logIn')">-->
+                  <!--<v-list-tile-action>-->
+                      <!--<v-icon>lock_outline</v-icon>-->
+                  <!--</v-list-tile-action>-->
+                  <!--<v-list-tile-content>-->
+                      <!--<v-list-tile-title>Log In</v-list-tile-title>-->
+                  <!--</v-list-tile-content>-->
+              <!--</v-list-tile>-->
+              <v-list-tile v-if="isLoggedIn" @click="$store.dispatch('auth/logOut')">
+                <v-icon>lock_open</v-icon>
+                <!--<v-list-tile-content>-->
+                  <!--<v-list-tile-title>Log Out</v-list-tile-title>-->
+                <!--</v-list-tile-content>-->
+              </v-list-tile>
+          </v-list-tile-action>
         </v-list-tile>
 
-        <v-list-tile>
-          <v-list-tile-title>Project</v-list-tile-title>
-        </v-list-tile>
+        <!-- Project -->
+        <v-subheader>Project</v-subheader>
         <v-list-tile>
           <v-list-tile-content>
             <v-select
@@ -44,9 +60,8 @@
           </v-list-tile-content>
         </v-list-tile>
 
-        <v-list-tile>
-          <v-list-tile-title>Visibility</v-list-tile-title>
-        </v-list-tile>
+        <!-- Visibility -->
+        <v-subheader>Visibility</v-subheader>
         <v-list-tile>
           <v-checkbox label="In Sight"
                       @change="calculateRowState"
@@ -74,23 +89,45 @@
         </v-list-tile>
       </v-list>
 
-      <v-list-tile v-if="!isLoggedIn" @click="$store.dispatch('auth/logIn')">
-        <v-list-tile-action>
-          <v-icon>lock_outline</v-icon>
-        </v-list-tile-action>
-        <v-list-tile-content>
-          <v-list-tile-title>Log In</v-list-tile-title>
-        </v-list-tile-content>
-      </v-list-tile>
-      <v-list-tile v-if="isLoggedIn" @click="$store.dispatch('auth/logOut')">
-        <v-list-tile-action>
-          <v-icon>lock_open</v-icon>
-        </v-list-tile-action>
-        <v-list-tile-content>
-          <v-list-tile-title>Log Out</v-list-tile-title>
-        </v-list-tile-content>
-      </v-list-tile>
+      <!-- Log in and out -->
+      <!--<v-list-tile v-if="!isLoggedIn" @click="$store.dispatch('auth/logIn')">-->
+        <!--<v-list-tile-action>-->
+          <!--<v-icon>lock_outline</v-icon>-->
+        <!--</v-list-tile-action>-->
+        <!--<v-list-tile-content>-->
+          <!--<v-list-tile-title>Log In</v-list-tile-title>-->
+        <!--</v-list-tile-content>-->
+      <!--</v-list-tile>-->
+      <!--<v-list-tile v-if="isLoggedIn" @click="$store.dispatch('auth/logOut')">-->
+        <!--<v-list-tile-action>-->
+          <!--<v-icon>lock_open</v-icon>-->
+        <!--</v-list-tile-action>-->
+        <!--<v-list-tile-content>-->
+          <!--<v-list-tile-title>Log Out</v-list-tile-title>-->
+        <!--</v-list-tile-content>-->
+      <!--</v-list-tile>-->
 
+      <!-- Shortcuts -->
+      <v-subheader>Shortcuts</v-subheader>
+      <v-list-tile>
+        <v-list-tile-content>
+          <v-list-tile-title>Toggle Navigation Drawer</v-list-tile-title>
+          <v-list-tile-sub-title>Ctrl+M</v-list-tile-sub-title>
+        </v-list-tile-content>
+      </v-list-tile>
+      <v-list-tile>
+        <v-list-tile-content>
+          <v-list-tile-title>New Topic</v-list-tile-title>
+          <v-list-tile-sub-title>Ctrl+Shift+N</v-list-tile-sub-title>
+        </v-list-tile-content>
+      </v-list-tile>
+      <v-list-tile>
+        <v-list-tile-content>
+          <v-list-tile-title>Save and Close Topic</v-list-tile-title>
+          <v-list-tile-sub-title>Ctrl+Enter</v-list-tile-sub-title>
+        </v-list-tile-content>
+      </v-list-tile>
+        
     </v-navigation-drawer>
 
     <v-content>

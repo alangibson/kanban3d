@@ -112,6 +112,8 @@
         </v-btn>
         <v-btn color="blue darken-1"
                flat
+               v-shortkey="['ctrl', 'enter']"
+               @shortkey="saveAndCloseTopicPopup"
                @click.native="saveAndCloseTopicPopup"
                tabindex="8">
           Save and Close
