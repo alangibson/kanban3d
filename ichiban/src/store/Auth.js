@@ -25,21 +25,14 @@ const actions = {
     firebase.auth()
       .signInWithPopup(provider)
       .then(result => {
-        console.log('login succeeded', result);
-        
         // This gives you a Google Access Token. You can use it to access the Google API.
         // var token = result.credential.accessToken;
         // The signed-in user info.
         // var user = result.user;
-        // TODO document.getElementById('quickstart-oauthtoken').textContent = token;
-        // console.log('quickstart-oauthtoken', token)
         context.commit('setIsLoggedIn', true);
         context.commit('showDrawer', true, {root: true});
       })
       .catch(error => {
-        console.log('login failed', error);
-        
-        // this.isLoggedIn = false
         context.commit('setIsLoggedIn', false);
         // Handle Errors here.
         // let errorCode = error.code

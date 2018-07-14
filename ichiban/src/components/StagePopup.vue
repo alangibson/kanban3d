@@ -7,16 +7,16 @@
       <v-card-text>
         <v-list>
           <v-list-tile v-if="stage.topics"
-                       v-for="(topic, index) in stage.topics"
+                       v-for="(topicRef, index) in stage.topics"
                        :key="index">
             <v-list-tile-content>
-              <a @click="showEditTopicPopup(topic, stage)">
-                <v-list-tile-title v-html="topic.name"></v-list-tile-title>
+              <a @click="showEditTopicPopup(topicRef, stage)">
+                <v-list-tile-title>{{ topicName(topicRef) }}</v-list-tile-title>
               </a>
-              <v-list-tile-sub-title v-html="topic.description"></v-list-tile-sub-title>
+              <v-list-tile-sub-title>{{ topicDescription(topicRef) }}</v-list-tile-sub-title>
             </v-list-tile-content>
             <v-list-tile-action>
-              <v-btn @click="deleteTopic(topic, index)">
+              <v-btn @click="deleteTopic(topicRef, index)">
                 <v-icon>delete</v-icon>
               </v-btn>
             </v-list-tile-action>
@@ -34,17 +34,35 @@ export default {
   ],
   computed: {
     stage () {
-      return this.value.stage;
+      let stage = this.value.stage;
+      // TODO don't assume there is a Topic for every TopicRef. Deleting sometimes leaves orphans
+      // stage.topics = stage.topics
+      //   .map(topicRef => this.$store.state.topics[topicRef.id]);
+      return stage;
     }
   },
   methods: {
-    showEditTopicPopup (topic, stage) {
+    topicByTopicRef (topicRef) {
+      return this.$store.state.topics[topicRef.id];
+    },
+    topicName (topicRef) {
+      let topic = this.topicByTopicRef(topicRef);
+      if (topic)
+        return topic.name;
+    },
+    topicDescription (topicRef) {
+      let topic = this.topicByTopicRef(topicRef);
+      if (topic)
+        return topic.description;
+    },
+    showEditTopicPopup (topicRef, stage) {
+      let topic = this.topicByTopicRef(topicRef);
       this.$store.commit('showEditTopicPopup', { topic, stage });
     },
-    deleteTopic (topic, topic_index) {
-      this.$store.dispatch('deleteTopicFromStage', {stage: this.value.stage, topic: topic, topic_index: topic_index});
+    deleteTopic (topicRef, topicIndex) {
+      this.$store.dispatch('deleteTopicFromStage', {stage: this.value.stage, topicRef: topicRef, topic_index: topicIndex});
       // HACK delete from our stage since it isnt reacting for some reason
-      this.value.stage.topics.splice(topic_index, 1);
+      this.value.stage.topics.splice(topicIndex, 1);
     },
     safeTopic (topic) {
       // HACK because there are nulls in stage.topic when it is out of sync with topics collection

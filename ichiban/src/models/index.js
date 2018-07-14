@@ -1,4 +1,6 @@
 import { clone, safeJSONStringify } from '@/common';
+import moment from 'moment';
+import momentDurationFormat from 'moment-duration-format';
 
 // These objects get written directly into the Firestore 'stages' collection.
 export const DEFAULT_STAGES = [
@@ -42,21 +44,18 @@ export class Project {
     this.owner_id = null;
     this.version = 1;
     // Note: This is not what we get from Firestore. All stages are Firestore refs.
-    this.stages = [
-    
-    ];
+    this.stages = [];
   }
   
   static fromSnapshot (projectSnapshot) {
     let project = new Project();
     Object.assign(project, projectSnapshot.data());
     project.id = projectSnapshot.id;
-    
+    project.ref = new StageRef(projectSnapshot.ref.id, projectSnapshot.ref.path);
     project.stages = projectSnapshot
       .data()
       .stages
       .map(stageRef => new StageRef(stageRef.id, stageRef.path));
-    
     return project;
   }
   
@@ -73,11 +72,12 @@ export class Stage {
     this.name = null;
     this.topics = [];
   }
-  
+
   static fromSnapshot (stageSnapshot) {
     let stage = new Stage();
     stage.id = stageSnapshot.id;
     stage.name = stageSnapshot.data().name;
+    stage.ref = new StageRef(stageSnapshot.ref.id, stageSnapshot.ref.path);
     stage.topics = stageSnapshot
       .data()
       .topics
@@ -107,16 +107,53 @@ export class StageRef {
   }
 }
 
+function nullIfUndefined (o) {
+  if (o === undefined) {
+    return null;
+  } else {
+    return o;
+  }
+}
+
 export class Topic {
-  constructor () {
+  // constructor ({name, description, who, when, where, createdAt, tags}) {
+  constructor (name, description, who, when, where, createdAt, tags) {
     this.id = null;           // uuid as string
-    this._name = null;         // string
-    this.description = null;  // string
-    this.who = null;          // string
-    this.when = null;         // ISO8601 datetime as string
-    this.where = null;        // string
-    this.tags = [];           // array of string
-    this.createdAt = new Date();
+    this._name = nullIfUndefined(name);         // string
+    this.description = nullIfUndefined(description);  // string
+    this.who = nullIfUndefined(who);          // string
+    this.when = nullIfUndefined(when);         // ISO8601 datetime as string
+    this.where = nullIfUndefined(where);        // string
+    this.tags = nullIfUndefined(tags);           // array of string
+    if (!tags) {
+      this.tags = [];
+    }
+    this.createdAt = nullIfUndefined(createdAt);
+    if (!createdAt) {
+      this.createdAt = new Date();
+    }
+    // Timer
+    this.interval = null;
+    this.countdown = null;
+    this.startTimer();
+  }
+
+  clearTimer () {
+    clearInterval(this.interval);
+  }
+
+  startTimer () {
+    if (! this.when)
+      return;
+    this.interval = setInterval(() => {
+      let msLeft = Date.parse(this.when) - new Date().getTime();
+      if (msLeft <= 0) {
+        this.countdown = '00:00';
+        this.clearTimer();
+      } else {
+        this.countdown = moment.duration(msLeft / 1000, 'seconds').format();
+      }
+    }, 1000);
   }
 
   get name () {
@@ -136,14 +173,38 @@ export class Topic {
   }
 
   static fromSnapshot (topicSnapshot) {
-    let topic = new Topic();
-    topic.name = topicSnapshot.data().name;
-    topic.description = topicSnapshot.data().description;
-    topic.who = topicSnapshot.data().who;
-    topic.when = topicSnapshot.data().when;
-    topic.where = topicSnapshot.data().where;
+    // let topic = new Topic({
+    //   name: topicSnapshot.data().name,
+    //   description: topicSnapshot.data().description,
+    //   who: topicSnapshot.data().who,
+    //   when: topicSnapshot.data().when,
+    //   where: topicSnapshot.data().where,
+    //   createdAt: topicSnapshot.data().createdAt,
+    //   tags: topicSnapshot.data().tags
+    // });
+
+    let topic = new Topic(
+      topicSnapshot.data().name,
+      topicSnapshot.data().description,
+      topicSnapshot.data().who,
+      topicSnapshot.data().when,
+      topicSnapshot.data().where,
+      topicSnapshot.data().createdAt,
+      topicSnapshot.data().tags
+    );
+
+    // let topic = new Topic(topicSnapshot.data());
+
+    // topic.name = topicSnapshot.data().name;
+    // topic.description = topicSnapshot.data().description;
+    // topic.who = topicSnapshot.data().who;
+    // topic.when = topicSnapshot.data().when;
+    // topic.where = topicSnapshot.data().where;
+
+    // TODO dont use id here
     topic.id = topicSnapshot.id;
     topic.ref = new TopicRef(topicSnapshot.ref.id, topicSnapshot.ref.path);
+
     // HACK backwards compatability
     if (topicSnapshot.data().createdAt) {
       topic.createdAt = topicSnapshot.data().createdAt;
@@ -170,9 +231,9 @@ export class Topic {
       when: this.when,
       where: this.where,
       createdAt: this.createdAt,
-      tags: this.tags,
+      tags: this.tags
       // TODO id should not be included
-      id: this.id
+      // id: this.id
     };
     // TODO why do we only sometimes have this?
     // TODO should this actually be included?
@@ -231,8 +292,11 @@ export class ProjectsMap {
   }
   
   getDefaultProject () {
-    console.log('getDefaultProject', this[Object.keys(this)[0]]);
     return this[Object.keys(this)[0]];
+  }
+
+  getDefaultProjectId () {
+    return Object.keys(this)[0];
   }
 }
 
@@ -243,6 +307,10 @@ export class StagesMap {
       stages[stageSnapshot.id] = Stage.fromSnapshot(stageSnapshot);
     });
     return stages;
+  }
+
+  get length () {
+    return Object.keys(this).length;
   }
 }
 

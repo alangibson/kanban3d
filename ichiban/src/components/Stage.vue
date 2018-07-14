@@ -20,13 +20,13 @@
       </v-flex>
     </v-card-title>
     <v-card-text class="flex-card-body">
-      <draggable v-model="topics"
+      <draggable v-model="topicsRefs"
                  :options="{group:'stages'}"
                  @change="handleChange"
                  @end="handleDrop"
                  :data-stage-id="stageId"
                  class="draggable">
-        <topic v-for="(topicRef, index) in topics"
+        <topic v-for="(topicRef, index) in topicsRefs"
                :key="index"
                :topicRef="topicRef"
                :stage="stage">
@@ -49,91 +49,52 @@ export default {
   },
   props: [
     'index',
-    'stage'
+    'stageRef'
   ],
   data: () => ({
-    showStageTitleButtons: false,
-    // topics: []
+    showStageTitleButtons: false
   }),
   computed: {
-    stageId () {
-      if (! this.stage) {
+    stage () {
+      if (! this.stageRef)
         return;
-      }
-      return this.stage.id;
+      return this.$store.state.stages[this.stageRef.id];
+    },
+    stageId () {
+      if (! this.stageRef)
+        return;
+      return this.stageRef.id;
     },
     stageName () {
-      if (! this.stage) {
+      if (! this.stage)
         return;
-      }
       return this.stage.name;
     },
-    // /**
-    //  * Only exists so we can watch it with a watcher.
-    //  */
-    // firestoreTopics () {
-    //   // Note: Stage must always have a child topics array, or we will lose messages on drag target
-    //   if (! this.stage) {
-    //     return;
-    //   }
-    //   // Warning: it is possible to references in stages[].topics to topics that do not exist in topics collection
-    //   // debugger;
-    //   return this.$store.state.stages[this.stage.id].topics
-    //     .map(topicRef => {
-    //       // Only return something if we actually can find the topic
-    //       if (topicRef.id in this.$store.state.topics) {
-    //         return this.$store.state.topics[topicRef.id];
-    //       }
-    //     })
-    //     // Filter out nulls
-    //     .filter(topic => !!topic);
-    // },
-    // topics: {
-    //   get () {
-    //     // Note: Stage must always have a child topics array, or we will lose messages on drag target
-    //     if (! this.stage) {
-    //       return;
-    //     }
-    //     // Warning: it is possible to references in stages[].topics to topics that do not exist in topics collection
-    //     // debugger;
-    //     return this.$store.state.stages[this.stage.id].topics
-    //       .map(topicRef => {
-    //         // Only return something if we actually can find the topic
-    //         if (topicRef.id in this.$store.state.topics) {
-    //           return this.$store.state.topics[topicRef.id];
-    //         }
-    //       })
-    //       // Filter out nulls
-    //       .filter(topic => !!topic);
-    //   },
-    //   set (topics) {
-    //     // debugger;
-    //     // this.$store.dispatch('setTopicsInStage', {
-    //     //   topics: topics,
-    //     //   stage: this.stage
-    //     // })
-    //     console.log('set topics', this.stage.name, topics);
-    //   }
-    // }
-    topics: {
+    topicsRefs: {
       get () {
-        if (! this.stage) {
+        // TODO we are getting Stage objects, but then getting StageRefs from store state.
+        // Can we just keep full Stage object everywhere?
+
+        // console.log('topics', this.stage.topics.length, this.$store.state.stages[this.stage.id]);
+        if (! this.stage)
           return;
-        }
-        return this.$store.state.stages[this.stage.id].topics;
+        return this.stage.topics;
+        // if (! this.stage) {
+        //   return;
+        // }
+        // return this.stage.topics;
       },
-      set (topics) {
+      set (topicRefs) {
         // Prevent glitches when drag and dropping
         // We will actually write to Firestore in drop event handler
-        this.$store.commit('setTopicsInStage', {topics, stage: this.stage});
+        this.$store.commit('setTopicRefsInStageByStageRef', {topicRefs: topicRefs, stageRef: this.stageRef});
       }
     }
   },
   methods: {
     showStagePopup (stage) {
-      if (! stage) {
+      if (! stage)
         return;
-      }
       this.$store.commit('showStagePopup', stage);
     },
     handleDrop (event) {
@@ -148,7 +109,6 @@ export default {
       // TODO if Stage is either 'Done' or 'Cancelled', set Topic.isInPastStage=true
 
       // TODO instead of handleChange, we should have an atomic operation to move Topic from one Stage to Another
-      console.log(event);
       // event.end.from.dataSet.stageId
       // event.end.to.dataSet.stageId
       // event.end.item.dataSet.topicId
@@ -170,19 +130,8 @@ export default {
       } else if (event.moved) {
         // We changed sort order of a stage
       }
-
-      // console.log(event);
-      // this.$store.dispatch('setTopicsInStage', {
-      //   topics: this.topics,
-      //   stage: this.stage
-      // })
     }
-  },
-  // watch: {
-  //   firestoreTopics (newValue) {
-  //     this.topics = newValue;
-  //   }
-  // }
+  }
 }
 </script>
 

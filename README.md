@@ -30,3 +30,7 @@ export PATH="$PWD/node_modules/.bin:$PATH"
 rm -fr dist
 npm run build
 firebase deploy
+
+# Backup Firestore
+npm install firestore-backup-restore
+firestore-backup-restore --accountCredentials ichi-ban-firebase-adminsdk-ywt33-8d2a37e8a9.json --backupPath ./backups/firestore 

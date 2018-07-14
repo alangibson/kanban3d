@@ -88,31 +88,23 @@ const getters = {
       console.log('Could not find active project with id ', state.activeProjectId);
       return;
     }
-    
     // Create a cloned Project object
     // Clone object since we will modify it
     let project = Object.assign(new Project(), state.projects[state.activeProjectId]);
-    // let project = state.projects[state.activeProjectId];
-    
     // Build Project->Stage->Topic heirarchy by resolving id references
     project.stages = project.stages
       .map(stageRef => {
-        
         // Create a Stage object
         if (! state.stages[stageRef.id]) {
           return;
         }
         // Clone object since we will modify it
         let stage = Object.assign(new Stage(), state.stages[stageRef.id]);
-        // let stage = state.stages[stageRef.id];
-        
         // Fill out Topics in stage
         stage.topics = stage.topics
           .map(topicRef => state.topics[topicRef.id]);
-        
         return stage;
       });
-    
     return project;
   }
 };
@@ -188,9 +180,6 @@ const actions = {
     }
   },
   moveTopicById (context, { topicId, fromStageId, toStageId }) {
-    // console.log('moveTopicById ', topicId, fromStageId, toStageId);
-    // context.commit('moveTopicById', { topicId, fromStageId, toStageId });
-
     // Do write in a batch/transaction
     let batch = db.batch();
 
@@ -210,10 +199,10 @@ const actions = {
 
     batch.commit();
   },
-  deleteTopicFromStage (context, { stage, topic, topic_index }) {
+  deleteTopicFromStage (context, { stage, topicRef, topic_index }) {
 
     // let topicId = stage.topics[topic_index].id;
-    let topicId = topic.id;
+    let topicId = topicRef.id;
 
     // Delete entry from stage.topics
     // TODO execute these in a batch
@@ -253,21 +242,21 @@ const actions = {
    * @param topics Array of topic refs. Can be empty array.
    * @param stage Stage to save Topics list to
    */
-  setTopicsInStage (context, { topics, stage }) {
+  setTopicRefsInStageByStageRef (context, { topicRefs, stageRef }) {
 
     // Update local state
     // Causes glitch where topic jumps to previous stage when Firestore updates
-    context.commit('setTopicsInStage', { topics, stage });
+    context.commit('setTopicRefsInStageByStageRef', { topicRefs, stageRef });
 
     // Turn TopicRef objects into real Firestore DocumentReferences
-    let newStage = stage.toFirestoreDoc();
-    newStage.topics = topics
+    let newStage = context.state.stages[stageRef.id].toFirestoreDoc();
+    newStage.topics = topicRefs
       .map(topic => db.doc(topic.path));
     
     db.collection('projects')
       .doc(context.getters.project.id)
       .collection('stages')
-      .doc(stage.id)
+      .doc(stageRef.id)
       .update(newStage);
     
     // TODO add event
@@ -383,10 +372,12 @@ const actions = {
       .onSnapshot(projectsSnapshot => {
         // Load up all projects
         context.commit('setProjects', ProjectsMap.fromSnapshot(projectsSnapshot));
-  
+
         // Set default project if needed
         // Do this here because the is the earliest point where we know which projects are available.
-        if (! context.state.activeProjectId) {
+        // TODO default project could come from ProjectsMap.getDefaultProject
+        // HACK shouldnt need to hard code demo project key here
+        if (! context.state.activeProjectId || context.state.activeProjectId === 'demo-project') {
           context.commit('setActiveProjectId', projectsSnapshot.docs[0].id);
         }
   
@@ -442,8 +433,8 @@ const mutations = {
   setStages (state, stages) {
     state.stages = stages;
   },
-  setTopicsInStage (state, {topics, stage}) {
-    state.stages[stage.id].topics = topics;
+  setTopicRefsInStageByStageRef (state, { topicRefs, stageRef }) {
+    state.stages[stageRef.id].topics = topicRefs;
   },
   setTopics (state, topics) {
     state.topics = topics;
@@ -468,7 +459,6 @@ const mutations = {
     state.add_topic_popup.visible = true;
   },
   showEditTopicPopup (state, { topic, stage }) {
-    console.log('showEditTopicPopup', topic.name, stage.name);
     state.edit_topic_popup.topic = topic;
     state.edit_topic_popup.stage = stage;
     state.edit_topic_popup.visible = true;

@@ -16,20 +16,9 @@
             <v-list-tile-title>{{userFullName}}</v-list-tile-title>
           </v-list-tile-content>
           <v-list-tile-action>
-              <!--<v-list-tile v-if="!isLoggedIn" @click="$store.dispatch('auth/logIn')">-->
-                  <!--<v-list-tile-action>-->
-                      <!--<v-icon>lock_outline</v-icon>-->
-                  <!--</v-list-tile-action>-->
-                  <!--<v-list-tile-content>-->
-                      <!--<v-list-tile-title>Log In</v-list-tile-title>-->
-                  <!--</v-list-tile-content>-->
-              <!--</v-list-tile>-->
-              <v-list-tile v-if="isLoggedIn" @click="$store.dispatch('auth/logOut')">
-                <v-icon>lock_open</v-icon>
-                <!--<v-list-tile-content>-->
-                  <!--<v-list-tile-title>Log Out</v-list-tile-title>-->
-                <!--</v-list-tile-content>-->
-              </v-list-tile>
+            <v-list-tile v-if="isLoggedIn" @click="$store.dispatch('auth/logOut')">
+              <v-icon>lock_open</v-icon>
+            </v-list-tile>
           </v-list-tile-action>
         </v-list-tile>
 
@@ -89,24 +78,6 @@
         </v-list-tile>
       </v-list>
 
-      <!-- Log in and out -->
-      <!--<v-list-tile v-if="!isLoggedIn" @click="$store.dispatch('auth/logIn')">-->
-        <!--<v-list-tile-action>-->
-          <!--<v-icon>lock_outline</v-icon>-->
-        <!--</v-list-tile-action>-->
-        <!--<v-list-tile-content>-->
-          <!--<v-list-tile-title>Log In</v-list-tile-title>-->
-        <!--</v-list-tile-content>-->
-      <!--</v-list-tile>-->
-      <!--<v-list-tile v-if="isLoggedIn" @click="$store.dispatch('auth/logOut')">-->
-        <!--<v-list-tile-action>-->
-          <!--<v-icon>lock_open</v-icon>-->
-        <!--</v-list-tile-action>-->
-        <!--<v-list-tile-content>-->
-          <!--<v-list-tile-title>Log Out</v-list-tile-title>-->
-        <!--</v-list-tile-content>-->
-      <!--</v-list-tile>-->
-
       <!-- Shortcuts -->
       <v-subheader>Shortcuts</v-subheader>
       <v-list-tile>
@@ -127,7 +98,14 @@
           <v-list-tile-sub-title>Ctrl+Enter</v-list-tile-sub-title>
         </v-list-tile-content>
       </v-list-tile>
-        
+
+      <v-subheader>Links</v-subheader>
+      <v-list-tile>
+        <v-list-tile-content>
+          <v-list-tile-title><router-link to="/privacy"><a>Privacy</a></router-link></v-list-tile-title>
+        </v-list-tile-content>
+      </v-list-tile>
+
     </v-navigation-drawer>
 
     <v-content>
@@ -162,7 +140,6 @@ export default {
           name: value.name
         });
       });
-      console.log('projects', projects, this.$store.state.projects);
       return projects;
     },
     selectedProject: {
@@ -213,7 +190,6 @@ export default {
     // Listen for changes in authentication state
     firebase.auth()
       .onAuthStateChanged(user => {
-        console.log('onAuthStateChanged', user);
         if (user) {
           // User is signed in
           this.$store.dispatch('auth/setAuthenticatedUser', user)
