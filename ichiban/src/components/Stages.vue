@@ -83,7 +83,7 @@ export default {
   height: 49vh !important;
 }
 .flex-row-minimized {
-  height: 5vh !important;
+  height: 10vh !important;
 }
 .flex-row-minimized .topic {
   display: none;
@@ -93,7 +93,7 @@ export default {
   overflow: hidden;
 }
 .flex-row-maximized {
-  height: 80vh !important;
+  height: 87vh !important;
 }
 .flex-item {
   flex: 1 !important;
