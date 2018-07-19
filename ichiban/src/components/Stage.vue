@@ -99,12 +99,12 @@ export default {
     },
     handleDrop (event) {
       // Warning: Not sure if these ad-hoc objects will cause problems in addEvent
-      this.$store.dispatch('addEvent',
-        new Event({
-          type: 'TOPIC_MOVED',
-          topic: { id: event.item.dataset.topicId },
-          stage: { id: event.to.dataset.stageId }
-        }));
+      // this.$store.dispatch('addEvent',
+      //   new Event({
+      //     type: 'TOPIC_MOVED',
+      //     topic: { id: event.item.dataset.topicId },
+      //     stage: { id: event.to.dataset.stageId }
+      //   }));
 
       // TODO if Stage is either 'Done' or 'Cancelled', set Topic.isInPastStage=true
 

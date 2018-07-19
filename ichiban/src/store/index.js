@@ -30,6 +30,7 @@ var db = firebase.firestore();
 var unsubscribeProjects = () => {};
 var unsubscribeTopics = () => {};
 var unsubscribeStages = () => {};
+var unsubscribeEvents = () => {};
 
 /*
  * Vue Configuration
@@ -191,14 +192,40 @@ const actions = {
     batch.update(fromRef, context.state.stages[fromStageId].toFirestoreDoc());
 
     // Update to stage
-    let toRef = db.collection('projects')
+    let toStageRef = db.collection('projects')
       .doc(context.getters.project.id)
       .collection('stages')
       .doc(toStageId);
-    batch.update(toRef, context.state.stages[toStageId].toFirestoreDoc());
+    batch.update(toStageRef, context.state.stages[toStageId].toFirestoreDoc());
+
+    // Add event
+    // let topicRef = db.collection('projects')
+    //   .doc(context.getters.project.id)
+    //   .collection('topics')
+    //   .doc(topicId);
+    // db.collection('projects')
+    //   .doc(context.getters.project.id)
+    //   .collection('events')
+    //   .add(
+    //     new Event(
+    //       'TOPIC_MOVED',
+    //       topicRef,
+    //       toRef
+    //     ).toFirestoreDoc()
+    //   );
+
+    // Update metrics
+    context.state.topics[topicId].metrics.move(toStageRef);
+    // TODO call a mutator with commit
+    let topicRef = db.collection('projects')
+      .doc(context.getters.project.id)
+      .collection('topics')
+      .doc(topicId);
+    batch.update(topicRef, context.state.topics[topicId].toFirestoreDoc());
 
     batch.commit();
   },
+
   deleteTopicFromStage (context, { stage, topicRef, topic_index }) {
 
     // let topicId = stage.topics[topic_index].id;
@@ -258,9 +285,6 @@ const actions = {
       .collection('stages')
       .doc(stageRef.id)
       .update(newStage);
-    
-    // TODO add event
-    // context.dispatch('addEvent', {event_type: 'TOPIC_MOVED', topic: })
   },
   /**
    * Set active poject and start listening to Firestore.
@@ -321,6 +345,9 @@ const actions = {
       });
   },
   addEvent (context, event) {
+
+    console.log('topic', event.topic);
+
     let topicRef = db
       .collection('projects')
       .doc(context.getters.project.id)
@@ -387,7 +414,6 @@ const actions = {
           .collection('topics')
           .onSnapshot(topicsSnapshot => {
             // Load up all Topics
-            // debugger;
             context.commit('setTopics', TopicsMap.fromSnapshot(topicsSnapshot));
           });
   
@@ -397,15 +423,25 @@ const actions = {
           .collection('stages')
           .onSnapshot(stagesSnapshot => {
             // Load up all Stages
-            // debugger;
             context.commit('setStages', StagesMap.fromSnapshot(stagesSnapshot));
           });
+
+        // Listen for Events
+        // TODO query for subset of events
+        unsubscribeEvents = db.collection('projects')
+          .doc(context.state.activeProjectId)
+          .collection('events')
+          .onSnapshot(eventsSnapshot => {
+            context.commit('setEvents', EventsCollection.fromSnapshot(eventsSnapshot));
+          });
+
       });
   },
   unsubscribeFromFirestore (context) {
     unsubscribeProjects();
     unsubscribeTopics();
     unsubscribeStages();
+    unsubscribeEvents();
   }
 };
 
@@ -469,6 +505,12 @@ const mutations = {
   showStagePopup (state, stage) {
     state.show_stage_popup.stage = stage;
     state.show_stage_popup.visible = true;
+  },
+  //
+  // Events
+  //
+  setEvents (state, events) {
+    state.events = events;
   }
 };
 

@@ -38,6 +38,18 @@ export const DEFAULT_STAGES = [
   }
 ];
 
+function nullIfUndefined (o) {
+  if (o === undefined) {
+    return null;
+  } else {
+    return o;
+  }
+}
+
+//
+// Project
+//
+
 export class Project {
   constructor () {
     this.name = null;
@@ -66,6 +78,32 @@ export class Project {
     return clone(this);
   }
 }
+
+export class ProjectsMap {
+  static fromSnapshot (projectsSnapshot) {
+    let projects = new ProjectsMap();
+    projectsSnapshot.forEach(projectSnapshot => {
+      projects[projectSnapshot.id] = Project.fromSnapshot(projectSnapshot);
+    });
+    return projects;
+  }
+
+  hasProject (projectId) {
+    return projectId in this;
+  }
+
+  getDefaultProject () {
+    return this[Object.keys(this)[0]];
+  }
+
+  getDefaultProjectId () {
+    return Object.keys(this)[0];
+  }
+}
+
+//
+// Stages
+///
 
 export class Stage {
   constructor () {
@@ -107,17 +145,27 @@ export class StageRef {
   }
 }
 
-function nullIfUndefined (o) {
-  if (o === undefined) {
-    return null;
-  } else {
-    return o;
+export class StagesMap {
+  static fromSnapshot (stagesSnapshot) {
+    let stages = new StagesMap();
+    stagesSnapshot.forEach(stageSnapshot => {
+      stages[stageSnapshot.id] = Stage.fromSnapshot(stageSnapshot);
+    });
+    return stages;
+  }
+
+  get length () {
+    return Object.keys(this).length;
   }
 }
 
+//
+// Topics
+//
+
 export class Topic {
   // constructor ({name, description, who, when, where, createdAt, tags}) {
-  constructor (name, description, who, when, where, createdAt, tags) {
+  constructor (name, description, who, when, where, createdAt, tags, metrics) {
     this.id = null;           // uuid as string
     this._name = nullIfUndefined(name);         // string
     this.description = nullIfUndefined(description);  // string
@@ -127,6 +175,9 @@ export class Topic {
     this.tags = nullIfUndefined(tags);           // array of string
     if (!tags) {
       this.tags = [];
+    }
+    if (!metrics) {
+      this.metrics = new TopicMetrics();
     }
     this.createdAt = nullIfUndefined(createdAt);
     if (!createdAt) {
@@ -173,16 +224,6 @@ export class Topic {
   }
 
   static fromSnapshot (topicSnapshot) {
-    // let topic = new Topic({
-    //   name: topicSnapshot.data().name,
-    //   description: topicSnapshot.data().description,
-    //   who: topicSnapshot.data().who,
-    //   when: topicSnapshot.data().when,
-    //   where: topicSnapshot.data().where,
-    //   createdAt: topicSnapshot.data().createdAt,
-    //   tags: topicSnapshot.data().tags
-    // });
-
     let topic = new Topic(
       topicSnapshot.data().name,
       topicSnapshot.data().description,
@@ -192,19 +233,17 @@ export class Topic {
       topicSnapshot.data().createdAt,
       topicSnapshot.data().tags
     );
-
-    // let topic = new Topic(topicSnapshot.data());
-
-    // topic.name = topicSnapshot.data().name;
-    // topic.description = topicSnapshot.data().description;
-    // topic.who = topicSnapshot.data().who;
-    // topic.when = topicSnapshot.data().when;
-    // topic.where = topicSnapshot.data().where;
-
     // TODO dont use id here
     topic.id = topicSnapshot.id;
     topic.ref = new TopicRef(topicSnapshot.ref.id, topicSnapshot.ref.path);
-
+    // HACK backwards compatability
+    if (topicSnapshot.data().metrics) {
+      topic.metrics = new TopicMetrics(
+        topicSnapshot.data().metrics.lastStageRef,
+        topicSnapshot.data().metrics.lastTimestamp,
+        topicSnapshot.data().metrics.msInStage
+      );
+    }
     // HACK backwards compatability
     if (topicSnapshot.data().createdAt) {
       topic.createdAt = topicSnapshot.data().createdAt;
@@ -232,13 +271,14 @@ export class Topic {
       where: this.where,
       createdAt: this.createdAt,
       tags: this.tags
-      // TODO id should not be included
-      // id: this.id
     };
     // TODO why do we only sometimes have this?
     // TODO should this actually be included?
     if (this.ref) {
       doc.ref = this.ref.toFirestoreDoc();
+    }
+    if (this.metrics) {
+      doc.metrics = this.metrics.toFirestoreDoc();
     }
     return doc;
   }
@@ -255,62 +295,6 @@ export class TopicRef {
    */
   toFirestoreDoc () {
     return clone(this);
-  }
-}
-
-export class Event {
-  constructor ({type, topic, stage, createdAt}) {
-    this.type = type;
-    this.topic = topic;
-    this.stage = stage;
-    if (createdAt) {
-      this.createdAt = createdAt;
-    } else {
-      this.createdAt = new Date();
-    }
-  }
-  
-  /**
-   * Plain object suitable for saving to Firestore.
-   */
-  toFirestoreDoc () {
-    return clone(this);
-  }
-}
-
-export class ProjectsMap {
-  static fromSnapshot (projectsSnapshot) {
-    let projects = new ProjectsMap();
-    projectsSnapshot.forEach(projectSnapshot => {
-      projects[projectSnapshot.id] = Project.fromSnapshot(projectSnapshot);
-    });
-    return projects;
-  }
-  
-  hasProject (projectId) {
-    return projectId in this;
-  }
-  
-  getDefaultProject () {
-    return this[Object.keys(this)[0]];
-  }
-
-  getDefaultProjectId () {
-    return Object.keys(this)[0];
-  }
-}
-
-export class StagesMap {
-  static fromSnapshot (stagesSnapshot) {
-    let stages = new StagesMap();
-    stagesSnapshot.forEach(stageSnapshot => {
-      stages[stageSnapshot.id] = Stage.fromSnapshot(stageSnapshot);
-    });
-    return stages;
-  }
-
-  get length () {
-    return Object.keys(this).length;
   }
 }
 
@@ -331,8 +315,135 @@ export class TopicsMap {
   }
 }
 
+export class TopicMetrics {
+  constructor (lastStageRef, lastTimestamp, msInStage) {
+    this.lastStageRef = lastStageRef;
+    this.lastTimestamp = lastTimestamp;
+    if (msInStage) {
+      this.msInStage = msInStage;
+    } else {
+      this.msInStage = {};
+    }
+  }
+
+  create (stageRef) {
+    this.msInStage[stageRef.id] = 0;
+    this.lastStageRef = stageRef;
+    this.lastTimestamp = Date.now();
+  }
+
+  move (toStageRef) {
+    console.log('move');
+    let now = Date.now();
+    if (this.lastStageRef && this.lastStageRef.id === toStageRef.id) {
+      console.log('move 1', now, this.lastTimestamp, (now - this.lastTimestamp));
+      this.msInStage[toStageRef.id] += (now - this.lastTimestamp);
+    } else {
+      if (this.msInStage[toStageRef.id] != null) {
+        console.log('move 2', now, this.lastTimestamp, (now - this.lastTimestamp));
+        this.msInStage[toStageRef.id] += (now - this.lastTimestamp);
+      } else {
+        // We've probably 'move'd without first doing 'create'
+        console.log('move 3', now, this.lastTimestamp, (now - this.lastTimestamp));
+        this.msInStage[toStageRef.id] = 0;
+      }
+    }
+    this.lastStageRef = toStageRef;
+    this.lastTimestamp = now;
+  }
+
+  /**
+   * Compute and return history metrics
+   */
+  get history () {
+    // Add in additional interval for this.lastStageRef because we must still be in that stage
+    // HACK backwards compatibility
+    let history = clone(this.msInStage);
+    if (this.lastStageRef) {
+      history[this.lastStageRef.id] += (Date.now() - this.lastTimestamp);
+    }
+    return history;
+  }
+
+  /**
+   * Plain object suitable for saving to Firestore.
+   */
+  toFirestoreDoc () {
+    return {
+      lastStageRef: this.lastStageRef,
+      lastTimestamp: this.lastTimestamp,
+      msInStage: this.msInStage
+    };
+  }
+}
+
+//
+// Events
+//
+
+export class Event {
+  constructor (type, topic, stage, createdAt) {
+    this.type = type;
+    this.topic = topic;
+    this.stage = stage;
+    if (createdAt) {
+      this.createdAt = createdAt;
+    } else {
+      this.createdAt = new Date();
+    }
+  }
+
+  /**
+   * Plain object suitable for saving to Firestore.
+   */
+  toFirestoreDoc () {
+    return {
+      type: this.type,
+      topic: this.topic,
+      stage: this.stage,
+      createdAt: this.createdAt
+    };
+  }
+
+  static fromSnapshot (eventSnapshot) {
+    let event = new Event();
+    Object.assign(event, eventSnapshot.data());
+    event.ref = new EventRef(eventSnapshot.ref.id, eventSnapshot.ref.path);
+    return event;
+  }
+}
+
+export class EventRef {
+  constructor (id, path) {
+    this.id = id;
+    this.path = path;
+  }
+
+  /**
+   * Plain object suitable for saving to Firestore.
+   */
+  toFirestoreDoc () {
+    return clone(this);
+  }
+}
+
+//
+// export EventTypes {
+//   TOPIC_CREATED: 'TOPIC_CREATED',
+//   TOPIC_CREATED: 'TOPIC_CREATED'
+// }
+
 export class EventsCollection extends Array {
   constructor(...args) {
     super(...args);
   }
+
+  static fromSnapshot (eventsSnapshot) {
+    let events = new EventsCollection();
+    eventsSnapshot.forEach(eventSnapshot => {
+      events.push(Event.fromSnapshot(eventSnapshot));
+    });
+    return events;
+  }
+
 }
