@@ -84,7 +84,7 @@
                 </v-layout>
               </v-flex>
               <v-flex xs12>
-                <!-- Following v-if is to prevent exceptions on page load -->
+                <!-- This v-if is only here to avoid exceptions on startup -->
                 <v-select
                     v-if="!!selectedStageId"
                     label="Stage"
@@ -229,19 +229,34 @@ export default {
       }
     },
     selectedStageId: {
-      cache: false,
+      // cache: false,
       get () {
-        if (this.selectedStage) {
-          return this.selectedStage.id;
+        console.log('get selectedStageId', this.$store.state.stages);
+        if (this.selectedStage && this.$store.state.stages[this.selectedStage.ref.id]) {
+          console.log('get selectedStageId 1', this.selectedStage);
+          return this.selectedStage.ref.id;
         } else if (this.value.stage) {
-          // this.selectedStage = this.value.stage;
-          return this.value.stage.id;
-        } else if (this.$store.getters.project && this.$store.getters.project.stages[0]) {
+          console.log('get selectedStageId 2');
+          return this.value.stage.ref.id;
+        // } else if (this.$store.getters.project && this.$store.getters.project.stages[0]) {
+        //   // Fall back to first stage
+        //   console.log('get selectedStageId 3');
+        //   return this.$store.getters.project.stages[0].id;
+        } else if (this.$store.state.stages) {
           // Fall back to first stage
-          return this.$store.getters.project.stages[0].id;
+          // TODO This should be Soon stage, not a random one
+          console.log('get selectedStageId 4');
+          let stageId = Object.keys(this.$store.state.stages)[0];
+          // Warning: side effect
+          // this.selectedStage = this.$store.state.stages[stageId];
+          console.log('this.selectedStage', this.selectedStage);
+          return stageId;
         }
+        console.log('get selectedStageId 5');
+        // else: nothing we can do
       },
       set (value) {
+        console.log('selectedStageId set', value);
         this.selectedStage = this.$store.state.stages[value];
       }
     },
@@ -299,7 +314,8 @@ export default {
   },
   mounted () {
     document.getElementsByClassName("ql-editor")[0].tabIndex = 2;
-
+    // Can have bad state from demo project when loading page
+    // this.selectedStage = null;
     // if (! this.selectedStage && this.$store.getters.project && this.$store.getters.project.stages[0]) {
     //   this.selectedStage = this.$store.getters.project.stages[0];
     // }

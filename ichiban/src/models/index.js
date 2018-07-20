@@ -74,8 +74,13 @@ export class Project {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
-    return clone(this);
+  toFirestoreDoc (db) {
+    return {
+      name: this.name,
+      owner_id: this.owner_id,
+      version: this.version,
+      stages: this.stages.map(stageRef => db.doc(this.ref.path))
+    };
   }
 }
 
@@ -126,8 +131,12 @@ export class Stage {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
-    return clone(this);
+  toFirestoreDoc (db) {
+    return {
+      name: this.name,
+      topics: this.topics
+        .map(topicRef => db.doc(topicRef.path))
+    };
   }
 }
 
@@ -140,7 +149,7 @@ export class StageRef {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
+  toFirestoreDoc (db) {
     return clone(this);
   }
 }
@@ -262,7 +271,7 @@ export class Topic {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
+  toFirestoreDoc (db) {
     let doc = {
       name: this.name,
       description: this.description,
@@ -275,10 +284,11 @@ export class Topic {
     // TODO why do we only sometimes have this?
     // TODO should this actually be included?
     if (this.ref) {
-      doc.ref = this.ref.toFirestoreDoc();
+      // doc.ref = this.ref.toFirestoreDoc(db);
+      doc.ref = db.doc(this.ref.path);
     }
     if (this.metrics) {
-      doc.metrics = this.metrics.toFirestoreDoc();
+      doc.metrics = this.metrics.toFirestoreDoc(db);
     }
     return doc;
   }
@@ -293,7 +303,7 @@ export class TopicRef {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
+  toFirestoreDoc (db) {
     return clone(this);
   }
 }
@@ -316,8 +326,21 @@ export class TopicsMap {
 }
 
 export class TopicMetrics {
+  /**
+   * TODO should not use a Firestore ref object here.
+   * Instead, use StageRef and convert to Firestore ref on flush to Firestore.
+   *
+   * @param lastStageRef A real Firestore ref object
+   * @param lastTimestamp A Date object
+   * @param msInStage
+   */
   constructor (lastStageRef, lastTimestamp, msInStage) {
-    this.lastStageRef = lastStageRef;
+    // Make sure we never store a Firestore ref object
+    if (lastStageRef) {
+      this.lastStageRef = new StageRef(lastStageRef.id, lastStageRef.path);
+    } else {
+      this.lastStageRef = null;
+    }
     this.lastTimestamp = lastTimestamp;
     if (msInStage) {
       this.msInStage = msInStage;
@@ -327,28 +350,28 @@ export class TopicMetrics {
   }
 
   create (stageRef) {
-    this.msInStage[stageRef.id] = 0;
-    this.lastStageRef = stageRef;
+    // Make sure we never store a Firestore ref object
+    let ref = new StageRef(stageRef.id, stageRef.path);
+    this.msInStage[ref.id] = 0;
+    this.lastStageRef = ref;
     this.lastTimestamp = Date.now();
   }
 
   move (toStageRef) {
-    console.log('move');
+    // Make sure we never store a Firestore ref object
+    let ref = new StageRef(toStageRef.id, toStageRef.path);
     let now = Date.now();
-    if (this.lastStageRef && this.lastStageRef.id === toStageRef.id) {
-      console.log('move 1', now, this.lastTimestamp, (now - this.lastTimestamp));
-      this.msInStage[toStageRef.id] += (now - this.lastTimestamp);
+    if (this.lastStageRef && this.lastStageRef.id === ref.id) {
+      this.msInStage[ref.id] += (now - this.lastTimestamp);
     } else {
-      if (this.msInStage[toStageRef.id] != null) {
-        console.log('move 2', now, this.lastTimestamp, (now - this.lastTimestamp));
-        this.msInStage[toStageRef.id] += (now - this.lastTimestamp);
+      if (this.msInStage[ref.id] != null) {
+        this.msInStage[ref.id] += (now - this.lastTimestamp);
       } else {
         // We've probably 'move'd without first doing 'create'
-        console.log('move 3', now, this.lastTimestamp, (now - this.lastTimestamp));
-        this.msInStage[toStageRef.id] = 0;
+        this.msInStage[ref.id] = 0;
       }
     }
-    this.lastStageRef = toStageRef;
+    this.lastStageRef = ref;
     this.lastTimestamp = now;
   }
 
@@ -368,9 +391,9 @@ export class TopicMetrics {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
+  toFirestoreDoc (db) {
     return {
-      lastStageRef: this.lastStageRef,
+      lastStageRef: db.doc(this.lastStageRef.path),
       lastTimestamp: this.lastTimestamp,
       msInStage: this.msInStage
     };
@@ -396,7 +419,7 @@ export class Event {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
+  toFirestoreDoc (db) {
     return {
       type: this.type,
       topic: this.topic,
@@ -422,7 +445,7 @@ export class EventRef {
   /**
    * Plain object suitable for saving to Firestore.
    */
-  toFirestoreDoc () {
+  toFirestoreDoc (db) {
     return clone(this);
   }
 }

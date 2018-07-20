@@ -119,11 +119,20 @@ const actions = {
   },
   saveTopicToStage (context, { topic, stage }) {
 
+    // We need a real Firestore ref for the TopicsMetric object
+    let stageRef = db.collection('projects')
+      .doc(context.getters.project.id)
+      .collection('stages')
+      .doc(stage.ref.id);
+
     // Updating existing topic or create new topic
     if (context.state.topics.hasTopic(topic.id)) {
       // Topic already exists, just update.
       // Note: Does not set stage
-      
+
+      // Call moved metric
+      topic.metrics.move(stageRef);
+
       // TODO need catch block
       // TODO why does topic disappear when topic.toFirestoreDoc throws error?
       // Topic already exists in some stage. Just need to update.
@@ -131,7 +140,7 @@ const actions = {
         .doc(context.getters.project.id)
         .collection('topics')
         .doc(topic.id)
-        .update(topic.toFirestoreDoc())
+        .update(topic.toFirestoreDoc(db))
         .then(() => {
           // TODO We should support moving to different Stage when updating
         })
@@ -141,7 +150,10 @@ const actions = {
       
     } else {
       // Topic doesn't exist in stage. Need to add.
-      
+
+      // Call created metric
+      topic.metrics.create(stageRef);
+
       // Get Project ref for Firestore
       let projectRef = db
         .collection('projects')
@@ -150,26 +162,26 @@ const actions = {
       // Add Topic to Project, then add Topic to Stage
       projectRef
         .collection('topics')
-        .add(topic.toFirestoreDoc())
+        .add(topic.toFirestoreDoc(db))
         .then(topicRef => {
           // Need this to create event below
           topic.id = topicRef.id;
           // Find stage in stages collection by id, then add topic ref to topics array
           // Dont update local data structure!
-          stage.topics.unshift(new TopicRef(topicRef.id, topicRef.path).toFirestoreDoc());
+          stage.topics.unshift(new TopicRef(topicRef.id, topicRef.path).toFirestoreDoc(db));
           projectRef
             .collection('stages')
             .doc(stage.id)
-            .update(stage.toFirestoreDoc())
+            .update(stage.toFirestoreDoc(db))
             .then(() => {
               // Create event
-              context.dispatch('addEvent',
-                new Event({
-                  type: 'TOPIC_CREATED',
-                  topic: topic,
-                  stage: stage
-                })
-              );
+              // context.dispatch('addEvent',
+              //   new Event({
+              //     type: 'TOPIC_CREATED',
+              //     topic: topic,
+              //     stage: stage
+              //   })
+              // );
             })
             .catch(error => {
               console.error(error);
@@ -189,30 +201,14 @@ const actions = {
       .doc(context.getters.project.id)
       .collection('stages')
       .doc(fromStageId);
-    batch.update(fromRef, context.state.stages[fromStageId].toFirestoreDoc());
+    batch.update(fromRef, context.state.stages[fromStageId].toFirestoreDoc(db));
 
     // Update to stage
     let toStageRef = db.collection('projects')
       .doc(context.getters.project.id)
       .collection('stages')
       .doc(toStageId);
-    batch.update(toStageRef, context.state.stages[toStageId].toFirestoreDoc());
-
-    // Add event
-    // let topicRef = db.collection('projects')
-    //   .doc(context.getters.project.id)
-    //   .collection('topics')
-    //   .doc(topicId);
-    // db.collection('projects')
-    //   .doc(context.getters.project.id)
-    //   .collection('events')
-    //   .add(
-    //     new Event(
-    //       'TOPIC_MOVED',
-    //       topicRef,
-    //       toRef
-    //     ).toFirestoreDoc()
-    //   );
+    batch.update(toStageRef, context.state.stages[toStageId].toFirestoreDoc(db));
 
     // Update metrics
     context.state.topics[topicId].metrics.move(toStageRef);
@@ -221,7 +217,7 @@ const actions = {
       .doc(context.getters.project.id)
       .collection('topics')
       .doc(topicId);
-    batch.update(topicRef, context.state.topics[topicId].toFirestoreDoc());
+    batch.update(topicRef, context.state.topics[topicId].toFirestoreDoc(db));
 
     batch.commit();
   },
@@ -276,7 +272,7 @@ const actions = {
     context.commit('setTopicRefsInStageByStageRef', { topicRefs, stageRef });
 
     // Turn TopicRef objects into real Firestore DocumentReferences
-    let newStage = context.state.stages[stageRef.id].toFirestoreDoc();
+    let newStage = context.state.stages[stageRef.id].toFirestoreDoc(db);
     newStage.topics = topicRefs
       .map(topic => db.doc(topic.path));
     
@@ -307,7 +303,7 @@ const actions = {
     project.stages = [];
     // Save new project to Firestore
     db.collection('projects')
-      .add(project.toFirestoreDoc())
+      .add(project.toFirestoreDoc(db))
       .then(projectRef => {
         // Start saving all new stages
         let stagePromises = [];

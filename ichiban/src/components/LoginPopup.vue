@@ -12,6 +12,13 @@
         </v-card-title>
 
         <v-card-text>
+
+          <v-alert v-if="wXS"
+                   :value="true"
+                   type="warning">
+            Ichiban is designed for large screens.
+          </v-alert>
+
           <p style="margin-bottom: 2em;">
             Ichiban is kanban for one.
           </p>
@@ -37,9 +44,13 @@
 </template>
 
 <script>
+import Vue from 'vue';
+import VueMediaQueryMixin from 'vue-media-query-mixin';
 import uuid from 'uuid/v4';
 import Stages from '@/components/Stages.vue';
 import { ProjectsMap, StagesMap, TopicsMap, Project, Stage, Topic, StageRef, TopicRef } from '@/models';
+
+Vue.use(VueMediaQueryMixin, {framework:'vuetify'});
 
 export default {
   components: {
@@ -56,7 +67,7 @@ export default {
         let stageKeys = [
           ['soon', 'Soon', 'Upcoming topics that need your attention'],
           ['in progress', 'In Progress', 'Topics you\'re actively working on'],
-          ['paused', 'Paused', 'Topics that you\re taking a break from'],
+          ['paused', 'Paused', 'Topics that you\'re taking a break from'],
           ['done', 'Done', 'Finished topics'],
           ['someday', 'Someday', 'Low value topics you might do someday'],
           ['handed off', 'Handed Off', 'Topics you\'ve delegated to someone else'],
@@ -67,8 +78,10 @@ export default {
         let projectId = 'demo-project';
         let project = new Project();
         stageKeys.forEach(keyName => {
+          // TODO use real constructor
           let stage = new Stage();
           stage.name = keyName[1];
+          stage.ref = new StageRef(keyName[0], keyName[0]);
           stages[keyName[0]] = stage;
           let stageRef = new StageRef(keyName[0], null);
           stageRefs.push(stageRef);
@@ -103,4 +116,5 @@ export default {
 #login-stages .flex-row {
   height: 15rem !important;
 }
+
 </style>

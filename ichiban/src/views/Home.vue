@@ -87,8 +87,8 @@ export default {
     toggleNavigationDrawer () {
       this.$store.state.drawer = ! this.$store.state.drawer;
     },
-    showAddTopicPopup (stage) {
-      this.$store.dispatch('showAddTopicPopup', stage);
+    showAddTopicPopup () {
+      this.$store.dispatch('showAddTopicPopup');
     },
     // stageByIndex (index) {
     //   return this.$store.getters.project.stages[index];

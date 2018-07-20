@@ -28,6 +28,7 @@
     "uuid": "^3.2.1",
     "vue": "^2.5.13",
     "vue-froala-wysiwyg": "^2.7.6",
+    "vue-media-query-mixin": "^0.1.0",
     "vue-quill-editor": "^3.0.5",
     "vue-router": "^3.0.1",
     "vue-shortkey": "^3.1.6",
