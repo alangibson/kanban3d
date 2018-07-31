@@ -1,42 +1,21 @@
+import uuid from 'uuid/v4';
 import { clone, safeJSONStringify } from '@/common';
 import moment from 'moment';
 import momentDurationFormat from 'moment-duration-format';
 
 // These objects get written directly into the Firestore 'stages' collection.
-export const DEFAULT_STAGES = [
-  {
-    name: "Soon",
-    topics: []
-  },
-  {
-    name: "In Progress",
-    topics: []
-  },
-  {
-    name: "Paused",
-    topics: []
-  },
-  {
-    name: "Done",
-    topics: []
-  },
-  {
-    name: "Someday",
-    topics: []
-  },
-  {
-    name: "Handed Off",
-    topics: []
-  },
-  {
-    name: "Blocked",
-    topics: []
-  },
-  {
-    name: "Canceled",
-    topics: []
-  }
-];
+export function defaultStages () {
+  let stages = new StagesMap();
+  stages[uuid()] = new Stage("Soon");
+  stages[uuid()] = new Stage("In Progress");
+  stages[uuid()] = new Stage("Paused");
+  stages[uuid()] = new Stage("Done");
+  stages[uuid()] = new Stage("Someday");
+  stages[uuid()] = new Stage("Handed Off");
+  stages[uuid()] = new Stage("Blocked");
+  stages[uuid()] = new Stage("Canceled");
+  return stages;
+}
 
 function nullIfUndefined (o) {
   if (o === undefined) {
@@ -79,7 +58,8 @@ export class Project {
       name: this.name,
       owner_id: this.owner_id,
       version: this.version,
-      stages: this.stages.map(stageRef => db.doc(this.ref.path))
+      stages: this.stages
+        .map(stageRef => db.doc(stageRef.path))
     };
   }
 }
@@ -104,6 +84,14 @@ export class ProjectsMap {
   getDefaultProjectId () {
     return Object.keys(this)[0];
   }
+
+  get length () {
+    return Object.keys(this).length;
+  }
+
+  get isEmpty () {
+    return ! Object.keys(this).length;
+  }
 }
 
 //
@@ -111,9 +99,14 @@ export class ProjectsMap {
 ///
 
 export class Stage {
-  constructor () {
-    this.name = null;
-    this.topics = [];
+  constructor (name, ref, topics) {
+    this.name = name;
+    this.ref = ref;
+    if (! topics) {
+      this.topics = [];
+    } else {
+      this.topics = topics;
+    }
   }
 
   static fromSnapshot (stageSnapshot) {
@@ -154,6 +147,9 @@ export class StageRef {
   }
 }
 
+/**
+ * Map of Stages, where key is Stage id from Firestore and value is Stage object.
+ */
 export class StagesMap {
   static fromSnapshot (stagesSnapshot) {
     let stages = new StagesMap();
@@ -165,6 +161,13 @@ export class StagesMap {
 
   get length () {
     return Object.keys(this).length;
+  }
+
+  forEach (cb) {
+    Object.keys(this)
+      .forEach(key => {
+        cb(this[key]);
+      });
   }
 }
 

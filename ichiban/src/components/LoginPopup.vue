@@ -46,9 +46,11 @@
 <script>
 import Vue from 'vue';
 import VueMediaQueryMixin from 'vue-media-query-mixin';
-import uuid from 'uuid/v4';
+// import uuid from 'uuid/v4';
 import Stages from '@/components/Stages.vue';
-import { ProjectsMap, StagesMap, TopicsMap, Project, Stage, Topic, StageRef, TopicRef } from '@/models';
+// import { ProjectsMap, StagesMap, TopicsMap, Project, Stage, Topic, StageRef, TopicRef } from '@/models';
+// import { DemoProjects, DemoStages, DemoTopics, DemoActiveProjectId } from '@/models/demo';
+import demoProjectGenerator from '@/models/demo';
 
 Vue.use(VueMediaQueryMixin, {framework:'vuetify'});
 
@@ -60,54 +62,23 @@ export default {
     showLogInOverlay() {
       // When we aren't logged in, set a demo project as active project
       if (! this.$store.state.auth.isLoggedIn) {
-        let projects = new ProjectsMap();
-        let topics = new TopicsMap();
-        let stages = new StagesMap();
-        let stageRefs = [];
-        let stageKeys = [
-          ['soon', 'Soon', 'Upcoming topics that need your attention'],
-          ['in progress', 'In Progress', 'Topics you\'re actively working on'],
-          ['paused', 'Paused', 'Topics that you\'re taking a break from'],
-          ['done', 'Done', 'Finished topics'],
-          ['someday', 'Someday', 'Low value topics you might do someday'],
-          ['handed off', 'Handed Off', 'Topics you\'ve delegated to someone else'],
-          ['blocked', 'Blocked', 'Topics you can\'t work on right now due to external forces'],
-          ['cancelled', 'Cancelled', 'Topics you never needed in the first place']
-        ];
-        // Note: Do not change projectId. Is used in check when setting new active project after login.
-        let projectId = 'demo-project';
-        let project = new Project();
-        stageKeys.forEach(keyName => {
-          // TODO use real constructor
-          let stage = new Stage();
-          stage.name = keyName[1];
-          stage.ref = new StageRef(keyName[0], keyName[0]);
-          stages[keyName[0]] = stage;
-          let stageRef = new StageRef(keyName[0], null);
-          stageRefs.push(stageRef);
-          project.stages.push(stageRef);
-          let topicId = uuid();
-          topics[topicId] = new Topic();
-          topics[topicId]._name = keyName[2];
-          stages[keyName[0]].topics.push(new TopicRef(topicId, null));
-        });
-        projects[projectId] = project;
-        this.$store.commit('setTopics', topics);
-        this.$store.commit('setStages', stages);
-        this.$store.commit('setProjects', projects);
-        this.$store.commit('setActiveProjectId', projectId);
+        // We're not logged in
+        let demoProject = demoProjectGenerator();
+        this.$store.commit('setTopics', demoProject.topics);
+        this.$store.commit('setStages', demoProject.stages);
+        this.$store.commit('setProjects', demoProject.projects);
+        this.$store.commit('setActiveProjectId', demoProject.activeProjectId);
       }
       else {
+        // We're logged in
         if ( ( ! this.$store.state.activeProjectId || this.$store.state.activeProjectId === 'demo-project' ) && this.$store.state.projects ) {
           this.$store.commit('setActiveProjectId', this.$store.state.projects.getDefaultProjectId());
         }
       }
-
       return ! this.$store.state.auth.isLoggedIn;
     }
   },
   mounted () {
-
   }
 }
 </script>

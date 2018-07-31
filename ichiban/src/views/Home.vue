@@ -23,8 +23,19 @@
       </v-btn>
     </v-layout>
 
-    <stages v-if="isLoggedIn">
+    <stages v-if="hasProject">
     </stages>
+    <div v-else
+         style="display: flex; align-items: center; height: 100%; width: 100%;">
+      <div style="text-align: center; width: 100%;">
+        <p>
+          Looks like you're new here. Maybe you want to
+        </p>
+        <p>
+          <v-btn @click="showNewProjectPopup">Create a New Project</v-btn>
+        </p>
+      </div>
+    </div>
 
     <!-- Project popup -->
     <project-popup v-model="$store.state.project_popup">
@@ -53,7 +64,6 @@ import draggable from 'vuedraggable';
 import TopicPopup from '@/components/TopicPopup.vue';
 import ProjectPopup from '@/components/ProjectPopup.vue';
 import StagePopup from '@/components/StagePopup.vue';
-import Stage from '@/components/Stage.vue';
 import Stages from '@/components/Stages.vue';
 
 export default {
@@ -62,7 +72,6 @@ export default {
     ProjectPopup,
     TopicPopup,
     StagePopup,
-    // Stage,
     Stages
   },
   data() {
@@ -81,6 +90,9 @@ export default {
     },
     isLoggedIn () {
       return this.$store.state.auth.isLoggedIn;
+    },
+    hasProject () {
+      return this.$store.state.auth.isLoggedIn && ! this.$store.state.projects.isEmpty;
     }
   },
   methods: {
@@ -90,98 +102,21 @@ export default {
     showAddTopicPopup () {
       this.$store.dispatch('showAddTopicPopup');
     },
-    // stageByIndex (index) {
-    //   return this.$store.getters.project.stages[index];
-    // },
     requiredRule (value) {
       return value !== null && value !== ""
     },
-    // rowClass (row_index) {
-    //   if (row_index === 0 && this.$store.state.show.row_state === 10) {
-    //     return 'flex-row-minimized'
-    //   } else if (row_index === 1 && this.$store.state.show.row_state === 1) {
-    //     return 'flex-row-minimized'
-    //   } else if (this.$store.state.show.row_state === 0 || this.$store.state.show.row_state === 11) {
-    //     return 'flex-row'
-    //   }
-    //   return 'flex-row-maximized'
-    // },
-    // colClass (index) {
-    //   if ((index === 0 || index === 4) && ! this.$store.state.show.future) {
-    //     return 'flex-item-hidden';
-    //   } else if ((index === 1 || index === 2 || index === 5 || index === 6 ) && ! this.$store.state.show.present) {
-    //     return 'flex-item-hidden';
-    //   } else if ((index === 3 || index === 7) && ! this.$store.state.show.past) {
-    //     return 'flex-item-hidden';
-    //   }
-    //   return 'flex-item';
-    // },
-    // rowChunks () {
-    //   // [[0,1,2,3], [4,5,6,7]]
-    //   if (this.$store.getters.project) {
-    //     return _.chunk(_.range(this.$store.getters.project.stages.length), 4);
-    //   }
-    // }
+    showNewProjectPopup () {
+      this.$store.commit('showNewProjectPopup');
+    },
   }
 }
 </script>
 
 <style>
-
-/*.flex-column {*/
-/*}*/
-
-/*.flex-row {*/
-  /*height: 49vh !important;*/
-/*}*/
-/*.flex-row-minimized {*/
-  /*height: 5vh !important;*/
-/*}*/
-/*.flex-row-minimized .topic {*/
-  /*display: none;*/
-/*}*/
-/*.flex-row-minimized .stage .flex-card-body {*/
-  /*height: 50px !important;*/
-  /*overflow: hidden;*/
-/*}*/
-/*.flex-row-maximized {*/
-  /*height: 80vh !important;*/
-/*}*/
-
 .draggable {
   min-height: 90%;
   min-width: 10px;
 }
-
-/*.flex-item {*/
-  /*flex: 1 !important;*/
-/*}*/
-
-/*.flex-item-hidden {*/
-  /*min-width: 5ch;*/
-  /*flex: 0 !important;*/
-  /*overflow: hidden;*/
-/*}*/
-/*.flex-item-hidden .card__title.subheader {*/
-  /*-webkit-transform: rotate(90deg);*/
-  /*-moz-transform: rotate(90deg);*/
-  /*-ms-transform: rotate(-90deg);*/
-  /*-o-transform: rotate(-90deg);*/
-/*}*/
-/*.flex-item-hidden .topic {*/
-  /*display: none;*/
-/*}*/
-
-/*.flex-card {*/
-  /*height: 100% !important;*/
-  /*overflow: hidden;*/
-/*}*/
-/*.flex-card-body {*/
-  /*!*height: 93% !important;*!*/
-  /*height: 93%;*/
-  /*overflow-y: auto;*/
-/*}*/
-
 .fab-container {
   position: fixed;
   bottom: 0;
@@ -189,5 +124,4 @@ export default {
   max-height: 160px;
   z-index: 100;
 }
-
 </style>

@@ -5,7 +5,8 @@ import createPersistedState from 'vuex-persistedstate'
 import firebase from '@firebase/app';
 import '@firebase/firestore';
 import { clone, safeJSONStringify } from '@/common';
-import { Project, Stage, Topic, TopicRef, Event, ProjectsMap, StagesMap, TopicsMap, EventsCollection, DEFAULT_STAGES } from '@/models';
+import { Project, Stage, Topic, TopicRef, Event, ProjectsMap, StagesMap, TopicsMap, EventsCollection, defaultStages } from '@/models';
+import demoProjectGenerator from '@/models/demo';
 import auth from '@/store/Auth';
 
 // firebase.firestore.setLogLevel('debug');
@@ -112,6 +113,52 @@ const getters = {
 
 const actions = {
   /**
+   * Start the application after user logs in
+   */
+  startUp (context) {
+    console.log('Starting up app');
+    firebase.auth()
+      .onAuthStateChanged(user => {
+        console.log('Firestore auth state changed', user);
+        if (user) {
+          context.dispatch('auth/handleAuthStateChanged', user, {root: true})
+            .then(() => {
+              // See if we have any projects
+              db.collection('projects')
+                .where('owner_id', '==', user.uid)
+                .onSnapshot(snapshot => {
+                  console.log('snapshot', snapshot);
+                  if (snapshot.empty) {
+                    // Do nothing so that demo project stays visible
+                    context.dispatch('listenToFirestore');
+                  } else {
+                    // We have projects, so start listening
+                    context.dispatch('listenToFirestore');
+                  }
+                });
+            });
+        } else {
+          // User signed out
+          context.dispatch('auth/handleAuthStateChanged', user, {root: true})
+            .then(() => {
+              context.dispatch('shutDown');
+            });
+        }
+      });
+  },
+  /**
+   * Stop the application after user logs out.
+   * @param context
+   */
+  shutDown (context) {
+    console.log('Shutting down app');
+    // context.dispatch('unsubscribeFromFirestore')
+    //   .then(() => {
+    //     context.dispatch('auth/setAuthenticatedUser', null, { root: true });
+    //   });
+    context.dispatch('unsubscribeFromFirestore');
+  },
+  /**
    * Reset local state
    */
   reset (context) {
@@ -174,14 +221,6 @@ const actions = {
             .doc(stage.id)
             .update(stage.toFirestoreDoc(db))
             .then(() => {
-              // Create event
-              // context.dispatch('addEvent',
-              //   new Event({
-              //     type: 'TOPIC_CREATED',
-              //     topic: topic,
-              //     stage: stage
-              //   })
-              // );
             })
             .catch(error => {
               console.error(error);
@@ -291,25 +330,39 @@ const actions = {
     context.commit('setActiveProjectId', project_id);
     context.dispatch('listenToFirestore');
   },
-  newProject (context, project) {
+  /**
+   * Create a new, empty project.
+   * @param context
+   * @param project Project object
+   * @param stages StagesMap object
+   */
+  newProject (context, { project, stages }) {
     let user = firebase.auth().currentUser;
     if (!user) {
       console.error('Cant create new project. Not logged in!');
       return;
     }
     project.owner_id = user.uid;
-    // let origStages = clone(project.stages);
-    let origStages = clone(DEFAULT_STAGES);
+    // Make sure we have a collection of Stages
+    if (! stages) {
+      stages = defaultStages();
+    }
+
     project.stages = [];
     // Save new project to Firestore
     db.collection('projects')
       .add(project.toFirestoreDoc(db))
       .then(projectRef => {
+
+        // TODO save topics, if any
+
         // Start saving all new stages
         let stagePromises = [];
-        origStages.forEach(origStage => {
+        stages.forEach(stage => {
           stagePromises.push(
-            projectRef.collection('stages').add(origStage));
+            projectRef.collection('stages')
+              .add(stage.toFirestoreDoc(db))
+          );
         });
         // Wait for all stages to be saved, then add them to project.stages array
         Promise.all(stagePromises)
@@ -383,25 +436,39 @@ const actions = {
   //
   // Firestore
   //
-  
+
+  /**
+   * Listen to changes in Firestore
+   */
   listenToFirestore (context) {
-    // Listen for changes
-    
+
+    console.log('Listening for changes to Firestore');
+
+    let user = firebase.auth().currentUser;
+    if (!user) {
+      console.warn('Cant listen to Firestore when there is no authenticated user');
+      return;
+    }
+    // if (! context.state.auth.user) {
+    //   return;
+    // }
+
     // Listen for Projects
     // Start listening for stages and topics once we have loaded projects
     // TODO getting lots of 'uncaught exception' errors when deleting project
     unsubscribeProjects = db.collection('projects')
-      .where('owner_id', '==', context.state.auth.user.uid)
+      // .where('owner_id', '==', context.state.auth.user.uid)
+      .where('owner_id', '==', user.uid)
       .onSnapshot(projectsSnapshot => {
         // Load up all projects
-        context.commit('setProjects', ProjectsMap.fromSnapshot(projectsSnapshot));
+        let projects = ProjectsMap.fromSnapshot(projectsSnapshot);
+        context.commit('setProjects', projects);
 
         // Set default project if needed
         // Do this here because the is the earliest point where we know which projects are available.
-        // TODO default project could come from ProjectsMap.getDefaultProject
         // HACK shouldnt need to hard code demo project key here
         if (! context.state.activeProjectId || context.state.activeProjectId === 'demo-project') {
-          context.commit('setActiveProjectId', projectsSnapshot.docs[0].id);
+          context.commit('setActiveProjectId', projects.getDefaultProjectId());
         }
   
         // Listen for Topics

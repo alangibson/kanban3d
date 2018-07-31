@@ -179,32 +179,32 @@ export default {
     showNewProjectPopup () {
       this.$store.commit('showNewProjectPopup');
     },
-    newProject (project_name) {
-      this.$store.dispatch('newProject', { project_name });
-    },
+    // newProject (project_name) {
+    //   this.$store.dispatch('newProject', { project_name });
+    // },
     deleteProject () {
       this.$store.dispatch('deleteProject', this.selectedProject);
     }
   },
   mounted() {
     // Listen for changes in authentication state
-    firebase.auth()
-      .onAuthStateChanged(user => {
-        if (user) {
-          // User is signed in
-          this.$store.dispatch('auth/setAuthenticatedUser', user)
-            .then(() => {
-              this.$store.dispatch('listenToFirestore');
-            });
-        } else {
-          // User signed out
-          this.$store.dispatch('unsubscribeFromFirestore')
-            .then(() => {
-              this.$store.dispatch('auth/setAuthenticatedUser', null);
-            });
-        }
-      })
-
+    // firebase.auth()
+    //   .onAuthStateChanged(user => {
+    //     console.log('Firestore auth state changed', user);
+    //     if (user) {
+    //       this.$store.dispatch('auth/handleAuthStateChanged', user)
+    //         .then(() => {
+    //           this.$store.dispatch('startUp', user);
+    //         });
+    //     } else {
+    //       // User signed out
+    //       this.$store.dispatch('auth/handleAuthStateChanged', user)
+    //         .then(() => {
+    //           this.$store.dispatch('shutDown');
+    //         });
+    //     }
+    //   });
+    this.$store.dispatch('startUp');
     this.calculateRowState()
   }
 }

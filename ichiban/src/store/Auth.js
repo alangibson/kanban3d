@@ -10,12 +10,29 @@ const state = {
 
 const actions = {
   setAuthenticatedUser (context, user) {
+
+    console.log('setAuthenticatedUser', user);
+
     if (user) {
       context.commit('setIsLoggedIn', true);
       context.commit('setAuthenticatedUser', user);
     } else {
       context.commit('setIsLoggedIn', false);
       context.commit('setAuthenticatedUser', null);
+    }
+  },
+  /**
+   * Callback for notifying module when Firebase auth state has changed.
+   * @param context
+   * @param user Firebase user object
+   */
+  handleAuthStateChanged (context, user) {
+    if (user) {
+      context.commit('setIsLoggedIn', true);
+      context.commit('setAuthenticatedUser', user);
+      context.commit('showDrawer', true, {root: true});
+    } else {
+      context.commit('setIsLoggedIn', false);
     }
   },
   logIn (context) {
@@ -25,22 +42,10 @@ const actions = {
     firebase.auth()
       .signInWithPopup(provider)
       .then(result => {
-        // This gives you a Google Access Token. You can use it to access the Google API.
-        // var token = result.credential.accessToken;
-        // The signed-in user info.
-        // var user = result.user;
-        context.commit('setIsLoggedIn', true);
-        context.commit('showDrawer', true, {root: true});
+        // Everything that needs to be loaded will be done reactively by handleAuthStateChanged
       })
       .catch(error => {
-        context.commit('setIsLoggedIn', false);
-        // Handle Errors here.
-        // let errorCode = error.code
-        // let errorMessage = error.message
-        // The email of the user's account used.
-        // let email = error.email
-        // The firebase.auth.AuthCredential type that was used.
-        // let credential = error.credential
+        // Everything that needs to be unloaded will be done reactively by handleAuthStateChanged
         if (errorCode === 'auth/account-exists-with-different-credential') {
           // TODO no alerts!
           alert('You have already signed up with a different auth provider for that email.')
@@ -59,6 +64,7 @@ const actions = {
         // Reset state to default
         context.dispatch('reset', null, {root: true})
           .then(() => {
+            context.commit('setAuthenticatedUser', null);
             context.commit('setIsLoggedIn', false);
           });
       })

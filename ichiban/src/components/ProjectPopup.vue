@@ -63,7 +63,7 @@ export default {
         return;
       }
       // Save new topic
-      this.$store.dispatch('newProject', this.value.project);
+      this.$store.dispatch('newProject', { project: this.value.project });
       this.resetPopup();
     },
     saveAndClosePopup () {
